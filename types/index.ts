@@ -23,10 +23,15 @@ export interface ApiResponse<T> {
 
 export interface User {
   id: string;
-  name: string;
+  name?: string;
   email: string;
   role: 'admin' | 'editor' | 'viewer';
   avatar?: string;
+  user_metadata?: {
+    name?: string;
+    role?: 'admin' | 'editor' | 'viewer';
+    [key: string]: any;
+  };
 }
 
 // ============================================================

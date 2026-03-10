@@ -32,7 +32,7 @@ export default function LoginPage() {
     setServerError('');
     try {
       const res = await authService.login({ email: data.email, password: data.password });
-      login(res.user);
+      login(res.user, res.session);
       router.push('/dashboard');
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Terjadi kesalahan');
@@ -154,11 +154,10 @@ export default function LoginPage() {
                 <input
                   type="email"
                   placeholder="admin@darussalam.or.id"
-                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${
-                    errors.email
+                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${errors.email
                       ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
                       : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
-                  }`}
+                    }`}
                   {...register('email', {
                     required: 'Email wajib diisi',
                     pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Format email tidak valid' },
@@ -183,11 +182,10 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Masukkan password"
-                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-11 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${
-                    errors.password
+                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-11 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${errors.password
                       ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
                       : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
-                  }`}
+                    }`}
                   {...register('password', { required: 'Password wajib diisi' })}
                 />
                 <button

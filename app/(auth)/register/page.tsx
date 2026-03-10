@@ -42,7 +42,7 @@ export default function RegisterPage() {
         email: data.email,
         password: data.password,
       });
-      login(res.user);
+      login(res.user, res.session);
       router.push('/dashboard');
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Terjadi kesalahan');
@@ -163,11 +163,10 @@ export default function RegisterPage() {
                 <input
                   type="text"
                   placeholder="Contoh: Ahmad Fauzi"
-                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${
-                    errors.name
+                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${errors.name
                       ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
                       : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
-                  }`}
+                    }`}
                   {...register('name', {
                     required: 'Nama lengkap wajib diisi',
                     minLength: { value: 3, message: 'Nama minimal 3 karakter' },
@@ -187,11 +186,10 @@ export default function RegisterPage() {
                 <input
                   type="email"
                   placeholder="nama@email.com"
-                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${
-                    errors.email
+                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${errors.email
                       ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
                       : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
-                  }`}
+                    }`}
                   {...register('email', {
                     required: 'Email wajib diisi',
                     pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Format email tidak valid' },
@@ -211,11 +209,10 @@ export default function RegisterPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Minimal 6 karakter"
-                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-11 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${
-                    errors.password
+                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-11 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${errors.password
                       ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
                       : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
-                  }`}
+                    }`}
                   {...register('password', {
                     required: 'Password wajib diisi',
                     minLength: { value: 6, message: 'Password minimal 6 karakter' },
@@ -236,17 +233,15 @@ export default function RegisterPage() {
                     {[1, 2, 3, 4].map((i) => (
                       <div
                         key={i}
-                        className={`h-1.5 flex-1 rounded-full transition-all ${
-                          i <= strength.level ? strength.color : 'bg-gray-200'
-                        }`}
+                        className={`h-1.5 flex-1 rounded-full transition-all ${i <= strength.level ? strength.color : 'bg-gray-200'
+                          }`}
                       />
                     ))}
                   </div>
-                  <p className={`text-xs font-medium ${
-                    strength.level <= 1 ? 'text-red-500' :
-                    strength.level === 2 ? 'text-orange-500' :
-                    strength.level === 3 ? 'text-amber-500' : 'text-emerald-600'
-                  }`}>
+                  <p className={`text-xs font-medium ${strength.level <= 1 ? 'text-red-500' :
+                      strength.level === 2 ? 'text-orange-500' :
+                        strength.level === 3 ? 'text-amber-500' : 'text-emerald-600'
+                    }`}>
                     Kekuatan password: {strength.label}
                   </p>
                 </div>
@@ -264,11 +259,10 @@ export default function RegisterPage() {
                 <input
                   type={showConfirm ? 'text' : 'password'}
                   placeholder="Ulangi password"
-                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-11 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${
-                    errors.confirm_password
+                  className={`h-11 w-full rounded-xl border bg-white pl-10 pr-11 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${errors.confirm_password
                       ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
                       : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
-                  }`}
+                    }`}
                   {...register('confirm_password', {
                     required: 'Konfirmasi password wajib diisi',
                     validate: (val) => val === passwordValue || 'Password tidak cocok',

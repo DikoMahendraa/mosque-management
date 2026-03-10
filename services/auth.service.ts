@@ -1,6 +1,5 @@
 import { User } from '@/types';
-
-const delay = (ms = 600) => new Promise((resolve) => setTimeout(resolve, ms));
+import { createClient } from '@/lib/supabase/client';
 
 interface LoginPayload {
   email: string;
@@ -15,73 +14,116 @@ interface RegisterPayload {
 
 interface AuthResponse {
   user: User;
-  token: string;
+  session: any; // Supabase session
 }
-
-const MOCK_ACCOUNTS: { email: string; password: string; user: User }[] = [
-  {
-    email: 'admin@darussalam.or.id',
-    password: 'admin123',
-    user: {
-      id: '1',
-      name: 'Admin Darussalam',
-      email: 'admin@darussalam.or.id',
-      role: 'admin',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-    },
-  },
-  {
-    email: 'takmir@darussalam.or.id',
-    password: 'takmir123',
-    user: {
-      id: '2',
-      name: 'Takmir Masjid',
-      email: 'takmir@darussalam.or.id',
-      role: 'editor',
-      avatar: '',
-    },
-  },
-];
 
 export const authService = {
   async login(payload: LoginPayload): Promise<AuthResponse> {
-    await delay();
-    const account = MOCK_ACCOUNTS.find(
-      (a) => a.email === payload.email && a.password === payload.password
-    );
-    if (!account) {
-      throw new Error('Email atau password salah. Silakan coba lagi.');
+    const supabase = createClient();
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: payload.email,
+      password: payload.password,
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Login gagal. Silakan coba lagi.');
     }
+
+    if (!data.user || !data.session) {
+      throw new Error('Login gagal. Silakan coba lagi.');
+    }
+
+    const user: User = {
+      id: data.user.id,
+      email: data.user.email || '',
+      name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || '',
+      role: data.user.user_metadata?.role || 'editor',
+      avatar: data.user.user_metadata?.avatar,
+      user_metadata: data.user.user_metadata,
+    };
+
     return {
-      user: account.user,
-      token: 'mock-jwt-token-' + account.user.id,
+      user,
+      session: data.session,
     };
   },
 
   async register(payload: RegisterPayload): Promise<AuthResponse> {
-    await delay();
-    const existing = MOCK_ACCOUNTS.find((a) => a.email === payload.email);
-    if (existing) {
-      throw new Error('Email sudah terdaftar. Gunakan email lain.');
-    }
-    if (payload.password.length < 6) {
-      throw new Error('Password minimal 6 karakter.');
-    }
-    const newUser: User = {
-      id: String(Date.now()),
-      name: payload.name,
+    const supabase = createClient();
+    
+    const { data, error } = await supabase.auth.signUp({
       email: payload.email,
-      role: 'editor',
-      avatar: '',
+      password: payload.password,
+      options: {
+        data: {
+          name: payload.name,
+          role: 'editor', // Default role for new users
+        },
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Registrasi gagal. Silakan coba lagi.');
+    }
+
+    if (!data.user) {
+      throw new Error('Registrasi gagal. Silakan coba lagi.');
+    }
+
+    const user: User = {
+      id: data.user.id,
+      email: data.user.email || '',
+      name: data.user.user_metadata?.name || payload.name,
+      role: data.user.user_metadata?.role || 'editor',
+      avatar: data.user.user_metadata?.avatar,
+      user_metadata: data.user.user_metadata,
     };
-    MOCK_ACCOUNTS.push({ email: payload.email, password: payload.password, user: newUser });
+
     return {
-      user: newUser,
-      token: 'mock-jwt-token-' + newUser.id,
+      user,
+      session: data.session,
     };
   },
 
   async logout(): Promise<void> {
-    await delay(200);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Logout error:', error);
+      // Don't throw error for logout, just log it
+    }
+  },
+
+  async getCurrentSession(): Promise<any> {
+    const supabase = createClient();
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    return session;
+  },
+
+  async getCurrentUser(): Promise<User | null> {
+    const supabase = createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      email: user.email || '',
+      name: user.user_metadata?.name || user.email?.split('@')[0] || '',
+      role: user.user_metadata?.role || 'editor',
+      avatar: user.user_metadata?.avatar,
+      user_metadata: user.user_metadata,
+    };
   },
 };
