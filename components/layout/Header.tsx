@@ -137,7 +137,7 @@ export default function Header() {
               {user?.avatar ? (
                 <Image
                   src={user.avatar}
-                  alt={user.name}
+                  alt={user.name ?? user.email}
                   fill
                   className="object-cover"
                   sizes="32px"

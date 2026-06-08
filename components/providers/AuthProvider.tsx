@@ -16,10 +16,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // Listen for auth changes
     const supabase = createClient();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: { user?: { email?: string } } | null) => {
         console.log('Auth state changed:', event, session?.user?.email);
-        
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
           if (session) {
             setSession(session);
           }

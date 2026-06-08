@@ -1,8 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
+import { isLocalAuthMode } from '@/lib/supabase/auth-mode'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
+  if (isLocalAuthMode()) {
+    return NextResponse.next()
+  }
+
   const res = NextResponse.next()
   const supabase = await createClient()
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@/types';
+import { isLocalAuthMode } from '@/lib/supabase/auth-mode';
 
 // ============================================================
 // SIDEBAR STORE
@@ -80,12 +81,12 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
     }),
-    { 
+    {
       name: 'auth-store',
-      partialize: (state) => ({ 
-        user: state.user, 
+      partialize: (state) => ({
+        user: state.user,
         isAuthenticated: state.isAuthenticated,
-        // Don't persist the session object, it will be refreshed from Supabase
+        ...(isLocalAuthMode() ? { session: state.session } : {}),
       }),
     }
   )
