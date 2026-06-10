@@ -33,6 +33,7 @@ export default function LoginPage() {
     try {
       const res = await authService.login({ email: data.email, password: data.password });
       login(res.user, res.session);
+      router.refresh();
       router.push('/dashboard');
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Terjadi kesalahan');
@@ -125,15 +126,6 @@ export default function LoginPage() {
             <p className="mt-1.5 text-sm text-gray-500">
               Masukkan kredensial Anda untuk mengakses dashboard
             </p>
-          </div>
-
-          {/* Demo credentials hint */}
-          <div className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 p-3.5">
-            <p className="text-xs font-semibold text-emerald-700 mb-1">Akun Demo</p>
-            <div className="space-y-0.5 text-xs text-emerald-600 font-mono">
-              <p>admin@darussalam.or.id / admin123</p>
-              <p>takmir@darussalam.or.id / takmir123</p>
-            </div>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

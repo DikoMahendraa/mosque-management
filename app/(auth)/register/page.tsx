@@ -43,6 +43,7 @@ export default function RegisterPage() {
         password: data.password,
       });
       login(res.user, res.session);
+      router.refresh();
       router.push('/dashboard');
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Terjadi kesalahan');

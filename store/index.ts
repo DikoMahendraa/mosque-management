@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@/types';
-import { isLocalAuthMode } from '@/lib/supabase/auth-mode';
 
 // ============================================================
 // SIDEBAR STORE
@@ -37,60 +36,63 @@ export const useSidebarStore = create<SidebarStore>()(
 interface AuthStore {
   user: User | null;
   isAuthenticated: boolean;
-  session: any | null; // Supabase session
+  isInitialized: boolean;
+  session: any | null;
   login: (user: User, session?: any) => void;
   logout: () => void;
   setSession: (session: any) => void;
   initializeAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthStore>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      isAuthenticated: false,
-      session: null,
-      login: (user, session = null) => set({ user, isAuthenticated: true, session }),
-      logout: () => set({ user: null, isAuthenticated: false, session: null }),
-      setSession: (session) => {
-        if (session?.user) {
-          const user: User = {
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
-            role: session.user.user_metadata?.role || 'editor',
-            avatar: session.user.user_metadata?.avatar,
-            user_metadata: session.user.user_metadata,
-          };
-          set({ user, isAuthenticated: true, session });
-        } else {
-          set({ user: null, isAuthenticated: false, session: null });
-        }
-      },
-      initializeAuth: async () => {
-        try {
-          const { createClient } = await import('@/lib/supabase/client');
-          const supabase = createClient();
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session) {
-            get().setSession(session);
-          }
-        } catch (error) {
-          console.error('Failed to initialize auth:', error);
-        }
-      },
-    }),
-    {
-      name: 'auth-store',
-      partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-        ...(isLocalAuthMode() ? { session: state.session } : {}),
-      }),
+function clearLegacyAuthStorage() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('auth-store');
+  localStorage.removeItem('sb-demo-auth');
+}
+
+export const useAuthStore = create<AuthStore>()((set, get) => ({
+  user: null,
+  isAuthenticated: false,
+  isInitialized: false,
+  session: null,
+  login: (user, session = null) => set({ user, isAuthenticated: true, session }),
+  logout: () => set({ user: null, isAuthenticated: false, session: null }),
+  setSession: (session) => {
+    if (session?.user) {
+      const user: User = {
+        id: session.user.id,
+        email: session.user.email || '',
+        name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
+        role: session.user.user_metadata?.role || 'editor',
+        avatar: session.user.user_metadata?.avatar,
+        user_metadata: session.user.user_metadata,
+      };
+      set({ user, isAuthenticated: true, session });
+    } else {
+      set({ user: null, isAuthenticated: false, session: null });
     }
-  )
-);
+  },
+  initializeAuth: async () => {
+    clearLegacyAuthStorage();
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        get().setSession(session);
+      } else {
+        get().logout();
+      }
+    } catch (error) {
+      console.error('Failed to initialize auth:', error);
+      get().logout();
+    } finally {
+      set({ isInitialized: true });
+    }
+  },
+}));
 
 // ============================================================
 // UI STORE

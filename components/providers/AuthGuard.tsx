@@ -6,19 +6,21 @@ import { useAuthStore } from '@/store';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isInitialized } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const redirected = useRef(false);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     if (!isAuthenticated && !redirected.current) {
       redirected.current = true;
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [isAuthenticated, pathname, router]);
+  }, [isAuthenticated, isInitialized, pathname, router]);
 
-  if (!isAuthenticated) {
+  if (!isInitialized || !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <LoadingSpinner text="Memeriksa sesi..." size="lg" />

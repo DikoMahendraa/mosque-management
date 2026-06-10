@@ -1,14 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { isLocalAuthMode } from './auth-mode';
 
 export async function createClient() {
-  if (isLocalAuthMode()) {
-    throw new Error(
-      'Supabase server client is disabled. Using localStorage authentication for demo mode.'
-    );
-  }
-
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -25,9 +18,7 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            // Called from a Server Component — safe to ignore when middleware refreshes sessions.
           }
         },
       },

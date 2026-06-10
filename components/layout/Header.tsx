@@ -16,9 +16,13 @@ export default function Header() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await authService.logout();
-    logout();
-    router.push('/login');
+    try {
+      await authService.logout();
+    } finally {
+      logout();
+      router.replace('/login');
+      router.refresh();
+    }
   };
   const [showNotif, setShowNotif] = useState(false);
   const [showUser, setShowUser] = useState(false);
