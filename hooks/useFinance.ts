@@ -4,17 +4,17 @@ import { FinanceFormData } from '@/types';
 
 export const FINANCE_KEY = 'finance';
 
-export function useFinanceList(params?: { page?: number; limit?: number; search?: string; type?: string; month?: string }) {
+export function useFinanceList(params?: { page?: number; limit?: number; search?: string; type?: string; month?: string; start_date?: string; end_date?: string }) {
   return useQuery({
     queryKey: [FINANCE_KEY, params],
     queryFn: () => financeService.getAll(params),
   });
 }
 
-export function useFinanceSummary() {
+export function useFinanceSummary(params?: { start_date?: string; end_date?: string }) {
   return useQuery({
-    queryKey: [FINANCE_KEY, 'summary'],
-    queryFn: () => financeService.getSummary(),
+    queryKey: [FINANCE_KEY, 'summary', params],
+    queryFn: () => financeService.getSummary(params),
   });
 }
 

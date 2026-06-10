@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { Plus, Pencil, Trash2, DollarSign, TrendingUp, TrendingDown, Wallet, Download } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -17,13 +17,14 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import { useFinanceList, useFinanceSummary, useCreateFinance, useUpdateFinance, useDeleteFinance } from '@/hooks/useFinance';
 import { FinanceTransaction, FinanceFormData } from '@/types';
-import { formatDate, formatCurrency } from '@/lib/utils';
+import { formatDate, formatCurrency, exportToCSV } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { useForm } from 'react-hook-form';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import dayjs from 'dayjs';
+import { financeService } from '@/services/finance.service';
 
 const INCOME_CATEGORIES = ['Infaq', 'Donasi', 'Wakaf', 'Zakat', 'Lainnya'];
 const EXPENSE_CATEGORIES = ['Honor', 'Operasional', 'Maintenance', 'Kegiatan', 'Lainnya'];
@@ -44,9 +45,42 @@ export default function FinancePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<FinanceTransaction | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  const { data, isLoading } = useFinanceList({ page, limit: 8, search, type: typeFilter });
-  const { data: summaryData } = useFinanceSummary();
+  const getDateRange = () => {
+    const today = dayjs();
+    switch (dateFilter) {
+      case 'today':
+        return { start_date: today.format('YYYY-MM-DD'), end_date: today.format('YYYY-MM-DD') };
+      case 'week':
+        return { 
+          start_date: today.startOf('week').format('YYYY-MM-DD'), 
+          end_date: today.endOf('week').format('YYYY-MM-DD') 
+        };
+      case 'month':
+        return { 
+          start_date: today.startOf('month').format('YYYY-MM-DD'), 
+          end_date: today.endOf('month').format('YYYY-MM-DD') 
+        };
+      case 'year':
+        return { 
+          start_date: today.startOf('year').format('YYYY-MM-DD'), 
+          end_date: today.endOf('year').format('YYYY-MM-DD') 
+        };
+      case 'custom':
+        return startDate && endDate ? { start_date: startDate, end_date: endDate } : {};
+      default:
+        return {};
+    }
+  };
+
+  const dateRange = getDateRange();
+
+  const { data, isLoading } = useFinanceList({ page, limit: 8, search, type: typeFilter, ...dateRange });
+  const { data: summaryData } = useFinanceSummary(dateRange);
   const createMutation = useCreateFinance();
   const updateMutation = useUpdateFinance();
   const deleteMutation = useDeleteFinance();
@@ -83,6 +117,97 @@ export default function FinancePage() {
     } catch { toast('error', 'Gagal', 'Terjadi kesalahan'); }
   };
 
+  const handleExport = async () => {
+    try {
+      toast('info', 'Mengekspor', 'Sedang memproses data...');
+      
+      const allData = await financeService.getAllForExport({ 
+        search, 
+        type: typeFilter,
+        ...dateRange
+      });
+
+      if (allData.length === 0) {
+        toast('warning', 'Tidak Ada Data', 'Tidak ada data untuk diekspor');
+        return;
+      }
+
+      const periodLabel = dateFilter === 'all' ? 'Semua Periode' :
+        dateFilter === 'today' ? 'Hari Ini' :
+        dateFilter === 'week' ? 'Minggu Ini' :
+        dateFilter === 'month' ? 'Bulan Ini' :
+        dateFilter === 'year' ? 'Tahun Ini' :
+        `${formatDate(startDate, 'DD/MM/YYYY')} - ${formatDate(endDate, 'DD/MM/YYYY')}`;
+
+      const csvData = [
+        {
+          'Keterangan': '=== RINGKASAN KEUANGAN ===',
+          'Kategori': '',
+          'Tanggal': '',
+          'Jumlah': '',
+          'Tipe': '',
+        },
+        {
+          'Keterangan': 'Periode',
+          'Kategori': periodLabel,
+          'Tanggal': '',
+          'Jumlah': '',
+          'Tipe': '',
+        },
+        {
+          'Keterangan': 'Total Pemasukan',
+          'Kategori': '',
+          'Tanggal': '',
+          'Jumlah': summary?.total_income ?? 0,
+          'Tipe': '',
+        },
+        {
+          'Keterangan': 'Total Pengeluaran',
+          'Kategori': '',
+          'Tanggal': '',
+          'Jumlah': summary?.total_expense ?? 0,
+          'Tipe': '',
+        },
+        {
+          'Keterangan': 'Saldo Kas',
+          'Kategori': '',
+          'Tanggal': '',
+          'Jumlah': summary?.balance ?? 0,
+          'Tipe': '',
+        },
+        {
+          'Keterangan': '',
+          'Kategori': '',
+          'Tanggal': '',
+          'Jumlah': '',
+          'Tipe': '',
+        },
+        {
+          'Keterangan': '=== DATA TRANSAKSI ===',
+          'Kategori': '',
+          'Tanggal': '',
+          'Jumlah': '',
+          'Tipe': '',
+        },
+        ...allData.map(item => ({
+          'Keterangan': item.title,
+          'Kategori': item.category,
+          'Tanggal': formatDate(item.date, 'DD/MM/YYYY'),
+          'Jumlah': item.amount,
+          'Tipe': item.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
+        }))
+      ];
+
+      const filename = `keuangan-masjid-${dayjs().format('YYYY-MM-DD-HHmmss')}.csv`;
+      exportToCSV(csvData, filename);
+      
+      toast('success', 'Berhasil', 'Data berhasil diekspor');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast('error', 'Gagal', 'Gagal mengekspor data');
+    }
+  };
+
   const summary = summaryData?.data;
   const chartData = (summary?.monthly_data ?? []).map((m) => ({
     month: dayjs(m.month + '-01').format('MMM'),
@@ -97,7 +222,20 @@ export default function FinancePage() {
     <DashboardLayout
       title="Keuangan"
       description="Kelola arus kas dan keuangan masjid"
-      actions={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>Tambah Transaksi</Button>}
+      actions={
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            leftIcon={<Download className="h-4 w-4" />} 
+            onClick={handleExport}
+          >
+            Ekspor CSV
+          </Button>
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>
+            Tambah Transaksi
+          </Button>
+        </div>
+      }
     >
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
@@ -154,14 +292,61 @@ export default function FinancePage() {
 
       {/* Transactions Table */}
       <Card padding="md">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Cari transaksi..." className="sm:w-72" />
-          <Select
-            options={[{ value: '', label: 'Semua Tipe' }, { value: 'income', label: 'Pemasukan' }, { value: 'expense', label: 'Pengeluaran' }]}
-            value={typeFilter}
-            onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-            className="sm:w-44"
-          />
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+            <SearchBar 
+              value={search} 
+              onChange={(v) => { setSearch(v); setPage(1); }} 
+              placeholder="Cari transaksi..." 
+              className="sm:w-72" 
+            />
+            <Select
+              options={[
+                { value: '', label: 'Semua Tipe' }, 
+                { value: 'income', label: 'Pemasukan' }, 
+                { value: 'expense', label: 'Pengeluaran' }
+              ]}
+              value={typeFilter}
+              onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+              className="sm:w-44"
+            />
+            <Select
+              options={[
+                { value: 'all', label: 'Semua Periode' },
+                { value: 'today', label: 'Hari Ini' },
+                { value: 'week', label: 'Minggu Ini' },
+                { value: 'month', label: 'Bulan Ini' },
+                { value: 'year', label: 'Tahun Ini' },
+                { value: 'custom', label: 'Rentang Tanggal' },
+              ]}
+              value={dateFilter}
+              onChange={(e) => { 
+                setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'year' | 'custom'); 
+                setPage(1); 
+              }}
+              className="sm:w-52"
+            />
+          </div>
+          
+          {dateFilter === 'custom' && (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+                placeholder="Tanggal Mulai"
+                className="sm:w-52"
+              />
+              <span className="text-gray-500 text-sm hidden sm:block">s/d</span>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+                placeholder="Tanggal Akhir"
+                className="sm:w-52"
+              />
+            </div>
+          )}
         </div>
         {isLoading ? <LoadingSpinner text="Memuat transaksi..." /> :
           (data?.data ?? []).length === 0 ? (

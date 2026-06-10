@@ -48,6 +48,8 @@ export const financeService = {
     search?: string;
     type?: string;
     month?: string;
+    start_date?: string;
+    end_date?: string;
   }): Promise<ApiResponse<FinanceTransaction[]>> {
     const supabase = createClient();
     const page = params?.page ?? 1;
@@ -64,7 +66,9 @@ export const financeService = {
       query = query.eq('type', params.type);
     }
 
-    if (params?.month) {
+    if (params?.start_date && params?.end_date) {
+      query = query.gte('date', params.start_date).lte('date', params.end_date);
+    } else if (params?.month) {
       const start = `${params.month}-01`;
       const end = new Date(
         Number(params.month.slice(0, 4)),
@@ -147,12 +151,21 @@ export const financeService = {
     return { data: null, message: 'Transaksi berhasil dihapus' };
   },
 
-  async getSummary(): Promise<ApiResponse<FinanceSummary>> {
+  async getSummary(params?: {
+    start_date?: string;
+    end_date?: string;
+  }): Promise<ApiResponse<FinanceSummary>> {
     const supabase = createClient();
-    const { data, error } = await supabase
+    
+    let query = supabase
       .from('finance_transactions')
       .select('type, amount, date');
 
+    if (params?.start_date && params?.end_date) {
+      query = query.gte('date', params.start_date).lte('date', params.end_date);
+    }
+
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
 
     const rows = (data ?? []).map((row) => ({
@@ -176,5 +189,47 @@ export const financeService = {
         monthly_data: buildMonthlyData(rows),
       },
     };
+  },
+
+  async getAllForExport(params?: {
+    search?: string;
+    type?: string;
+    month?: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<FinanceTransaction[]> {
+    const supabase = createClient();
+
+    let query = supabase
+      .from('finance_transactions')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (params?.type) {
+      query = query.eq('type', params.type);
+    }
+
+    if (params?.start_date && params?.end_date) {
+      query = query.gte('date', params.start_date).lte('date', params.end_date);
+    } else if (params?.month) {
+      const start = `${params.month}-01`;
+      const end = new Date(
+        Number(params.month.slice(0, 4)),
+        Number(params.month.slice(5, 7)),
+        0
+      );
+      const endDate = `${params.month}-${String(end.getDate()).padStart(2, '0')}`;
+      query = query.gte('date', start).lte('date', endDate);
+    }
+
+    if (params?.search) {
+      const q = `%${params.search.trim()}%`;
+      query = query.or(`title.ilike.${q},category.ilike.${q}`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    return (data ?? []).map((row: Record<string, unknown>) => mapFinanceTransaction(row));
   },
 };
