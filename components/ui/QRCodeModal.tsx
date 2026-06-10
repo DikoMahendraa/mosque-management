@@ -25,9 +25,9 @@ export default function QRCodeModal({
 
   const handleDownload = async () => {
     setDownloading(true);
-    
+
     try {
-      const svg = document.getElementById('qr-code-svg') as SVGElement;
+      const svg = document.getElementById('qr-code-svg') as unknown as SVGElement;
       if (!svg) {
         toast('error', 'Gagal', 'QR Code tidak ditemukan');
         setDownloading(false);
@@ -38,7 +38,7 @@ export default function QRCodeModal({
       const svgData = new XMLSerializer().serializeToString(svg);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
+
       const scale = 4; // Higher resolution for better quality
       const size = 300 * scale;
       canvas.width = size;
@@ -61,7 +61,7 @@ export default function QRCodeModal({
 
       img.onload = () => {
         ctx.drawImage(img, 0, 0, size, size);
-        
+
         // Convert canvas to blob and download
         canvas.toBlob((blob) => {
           if (blob) {
@@ -71,11 +71,11 @@ export default function QRCodeModal({
             link.download = filename;
             link.href = downloadUrl;
             link.click();
-            
+
             // Cleanup
             URL.revokeObjectURL(downloadUrl);
             URL.revokeObjectURL(url);
-            
+
             toast('success', 'Berhasil', 'QR Code berhasil diunduh');
           }
           setDownloading(false);
