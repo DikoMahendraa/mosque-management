@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, BookOpen, Send } from 'lucide-react';
+import { Plus, Pencil, Trash2, BookOpen, Send, QrCode } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -16,6 +16,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
+import QRCodeModal from '@/components/ui/QRCodeModal';
 import { useKajianList, useCreateKajian, useUpdateKajian, useDeleteKajian } from '@/hooks/useKajian';
 import { useUstadList } from '@/hooks/useUstad';
 import { useWhatsAppSettings } from '@/hooks/useSettings';
@@ -44,6 +45,7 @@ export default function KajianPage() {
   const [editItem, setEditItem] = useState<Kajian | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [broadcastItem, setBroadcastItem] = useState<Kajian | null>(null);
+  const [qrCodeItem, setQrCodeItem] = useState<Kajian | null>(null);
 
   const { data, isLoading } = useKajianList({ page, limit: 8, search, status: statusFilter });
   const { data: ustadData } = useUstadList({ limit: 100 });
@@ -113,6 +115,10 @@ export default function KajianPage() {
 
   const handleBroadcast = (kajian: Kajian) => {
     setBroadcastItem(kajian);
+  };
+
+  const handleShowQR = (kajian: Kajian) => {
+    setQrCodeItem(kajian);
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -185,10 +191,19 @@ export default function KajianPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleShowQR(item)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Generate QR Code"
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </Button>
                           {whatsappSettings?.enabled && item.status === 'upcoming' && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleBroadcast(item)}
                               className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                               title="Broadcast ke Jamaah"
@@ -275,7 +290,7 @@ export default function KajianPage() {
       </Modal>
 
       <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} isLoading={deleteMutation.isPending} />
-      
+
       <BroadcastModal
         isOpen={!!broadcastItem}
         onClose={() => setBroadcastItem(null)}
@@ -288,6 +303,14 @@ export default function KajianPage() {
           location: broadcastItem?.location ?? '',
           speaker: broadcastItem?.speaker ?? '',
         }}
+      />
+
+      <QRCodeModal
+        isOpen={!!qrCodeItem}
+        onClose={() => setQrCodeItem(null)}
+        title={qrCodeItem?.title ?? ''}
+        url={`https://digital-mosque.vercel.app/kajian/${qrCodeItem?.id}`}
+        description="Scan QR code ini untuk melihat detail kajian"
       />
     </DashboardLayout>
   );

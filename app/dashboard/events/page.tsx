@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, CalendarDays, Send } from 'lucide-react';
+import { Plus, Pencil, Trash2, CalendarDays, Send, QrCode } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -15,6 +15,7 @@ import Select from '@/components/ui/Select';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
+import QRCodeModal from '@/components/ui/QRCodeModal';
 import { useEventList, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/hooks/useEvents';
 import { useWhatsAppSettings } from '@/hooks/useSettings';
 import { MosqueEvent, EventFormData } from '@/types';
@@ -40,6 +41,7 @@ export default function EventsPage() {
   const [editItem, setEditItem] = useState<MosqueEvent | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [broadcastItem, setBroadcastItem] = useState<MosqueEvent | null>(null);
+  const [qrCodeItem, setQrCodeItem] = useState<MosqueEvent | null>(null);
 
   const { data, isLoading } = useEventList({ page, limit: 8, search, status: statusFilter });
   const { data: whatsappSettings } = useWhatsAppSettings();
@@ -80,6 +82,10 @@ export default function EventsPage() {
 
   const handleBroadcast = (event: MosqueEvent) => {
     setBroadcastItem(event);
+  };
+
+  const handleShowQR = (event: MosqueEvent) => {
+    setQrCodeItem(event);
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -125,10 +131,19 @@ export default function EventsPage() {
                         <td className="px-4 py-3"><Badge variant={statusBadge(item.status)}>{item.status === 'upcoming' ? 'Mendatang' : 'Selesai'}</Badge></td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleShowQR(item)}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title="Generate QR Code"
+                            >
+                              <QrCode className="h-4 w-4" />
+                            </Button>
                             {whatsappSettings?.enabled && item.status === 'upcoming' && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handleBroadcast(item)}
                                 className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                                 title="Broadcast ke Jamaah"
@@ -167,7 +182,7 @@ export default function EventsPage() {
         </form>
       </Modal>
       <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} isLoading={deleteMutation.isPending} />
-      
+
       <BroadcastModal
         isOpen={!!broadcastItem}
         onClose={() => setBroadcastItem(null)}
@@ -178,6 +193,14 @@ export default function EventsPage() {
           date: broadcastItem?.event_date ?? '',
           location: broadcastItem?.location ?? '',
         }}
+      />
+
+      <QRCodeModal
+        isOpen={!!qrCodeItem}
+        onClose={() => setQrCodeItem(null)}
+        title={qrCodeItem?.title ?? ''}
+        url={`https://digital-mosque.vercel.app/events/${qrCodeItem?.id}`}
+        description="Scan QR code ini untuk melihat detail event"
       />
     </DashboardLayout>
   );
