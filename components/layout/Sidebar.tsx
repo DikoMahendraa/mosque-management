@@ -55,27 +55,27 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 h-screen bg-gradient-to-b from-emerald-900 to-emerald-950 text-white transition-all duration-300 flex flex-col',
+          'fixed left-0 top-0 z-40 h-screen bg-linear-to-b from-primary to-primary/80 text-white transition-all duration flex flex-col',
           isOpen ? 'lg:w-64' : 'lg:w-20',
           isMobileOpen ? 'w-64 translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {/* Header */}
-        <div className="flex h-16 items-center justify-between px-4 border-b border-emerald-700/50">
+        <div className="flex h-16 items-center justify-between px-4 border-b border-primary/20 bg-primary">
           <div className={cn('flex items-center gap-3', !isOpen && 'lg:justify-center')}>
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 border border-emerald-500/30">
-              <Building2 className="h-5 w-5 text-emerald-300" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary border border-primary">
+              <Building2 className="h-5 w-5 text-white" />
             </div>
             {(isOpen || isMobileOpen) && (
               <div>
-                <p className="text-sm font-bold text-white leading-none">Darussalam</p>
-                <p className="text-xs text-emerald-300 mt-0.5">Dashboard</p>
+                <p className="text-lg font-bold text-white leading-none">Darussalam</p>
+                <p className="text-xs text-white mt-0.5">Dashboard</p>
               </div>
             )}
           </div>
           <button
             onClick={() => setMobileOpen(false)}
-            className="lg:hidden text-emerald-300 hover:text-white"
+            className="lg:hidden text-primary hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -98,23 +98,23 @@ export default function Sidebar() {
                     className={cn(
                       'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 group',
                       isActive
-                        ? 'bg-emerald-500/20 text-white border border-emerald-500/30'
-                        : 'text-emerald-200 hover:bg-emerald-800/50 hover:text-white',
+                        ? 'bg-primary text-white border border-primary'
+                        : 'text-white hover:bg-white hover:text-primary',
                       !isOpen && 'lg:justify-center lg:px-2'
                     )}
                     title={!isOpen ? item.label : undefined}
                   >
                     <Icon
                       className={cn(
-                        'h-5 w-5 flex-shrink-0 transition-colors',
-                        isActive ? 'text-emerald-300' : 'text-emerald-400 group-hover:text-emerald-200'
+                        'h-5 w-5 shrink-0 transition-colors',
+                        isActive ? 'text-white' : 'text-white group-hover:text-primary'
                       )}
                     />
                     {(isOpen || isMobileOpen) && (
                       <span className="truncate">{item.label}</span>
                     )}
                     {isActive && (isOpen || isMobileOpen) && (
-                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white" />
                     )}
                   </Link>
                 </li>
@@ -124,10 +124,10 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-emerald-700/50 px-3 py-3">
+        <div className="border-t border-primary px-3 py-3">
           {(isOpen || isMobileOpen) && (
-            <p className="text-center text-xs text-emerald-500">
-              © 2024 Masjid Darussalam
+            <p className="text-center text-xs text-white">
+              © 2026 Masjid Darussalam
             </p>
           )}
         </div>

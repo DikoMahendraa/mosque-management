@@ -1,8 +1,25 @@
 @import "tailwindcss";
 
+@theme {
+  /* Custom colors - now available as text-primary, bg-primary, etc. */
+  --color-primary-50: #e0f2f1;
+  --color-primary-100: #b2dfdb;
+  --color-primary-200: #80cbc4;
+  --color-primary-300: #4db6ac;
+  --color-primary-400: #26a69a;
+  --color-primary-500: #00695E; /* Your main primary color */
+  --color-primary-600: #00897b;
+  --color-primary-700: #00796b;
+  --color-primary-800: #00695c;
+  --color-primary-900: #004d40;
+  
+  /* Or just a single primary color */
+  --color-primary: #00695E;
+}
+
 :root {
-  --background: #f9fafb;
-  --foreground: #111827;
+  --background: oklch(0.97 0.005 262);
+  --foreground: #11271f;
 }
 
 body {
