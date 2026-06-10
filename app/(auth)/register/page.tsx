@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, Mail, Lock, User, Building2, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, CheckCircle2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store';
+import { AppLogo } from '@/components/ui/AppLogo';
 
 interface RegisterForm {
   name: string;
@@ -78,26 +79,15 @@ export default function RegisterPage() {
         <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-white/10" />
 
         {/* Logo */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-            <Building2 className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <p className="text-lg font-bold text-white leading-tight">Masjid Darussalam</p>
-            <p className="text-xs text-emerald-100">Management Dashboard</p>
-          </div>
+        <div className="relative z-10">
+          <AppLogo size="lg" priority />
+          <p className="mt-2 text-xs text-emerald-100">Management Dashboard</p>
         </div>
 
         {/* Center content */}
         <div className="relative z-10 text-center">
-          <div className="mx-auto mb-8 flex h-40 w-40 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
-            <svg viewBox="0 0 100 100" className="h-24 w-24 text-white" fill="currentColor">
-              <path d="M50 5 C40 5, 35 12, 35 20 C35 28, 40 32, 50 35 C60 32, 65 28, 65 20 C65 12, 60 5, 50 5Z" />
-              <path d="M47 35 L47 55 L53 55 L53 35 Z" />
-              <rect x="15" y="55" width="70" height="5" rx="2" />
-              <path d="M10 60 L10 90 L35 90 L35 70 L45 60 L55 60 L65 70 L65 90 L90 90 L90 60 Z" />
-              <rect x="42" y="70" width="16" height="20" rx="8" />
-            </svg>
+          <div className="mx-auto mb-8 flex items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm p-6">
+            <AppLogo size="xl" className="h-44" />
           </div>
           <h2 className="text-3xl font-bold text-white leading-tight">
             Bergabung Bersama<br />Kami Sekarang
@@ -129,14 +119,9 @@ export default function RegisterPage() {
       <div className="flex w-full items-center justify-center bg-gray-50 px-6 py-12 lg:w-1/2">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="font-bold text-gray-900">Masjid Darussalam</p>
-              <p className="text-xs text-gray-500">Management Dashboard</p>
-            </div>
+          <div className="mb-8 lg:hidden">
+            <AppLogo size="md" />
+            <p className="mt-1 text-xs text-gray-500">Management Dashboard</p>
           </div>
 
           <div className="mb-8">

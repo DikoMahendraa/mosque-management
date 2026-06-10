@@ -7,6 +7,7 @@ import { Eye, EyeOff, Mail, Lock, Building2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store';
+import { AppLogo } from '@/components/ui/AppLogo';
 
 interface LoginForm {
   email: string;
@@ -45,7 +46,7 @@ export default function LoginPage() {
       {/* Left panel — decorative */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500 p-12">
         {/* Pattern overlay */}
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -111,14 +112,9 @@ export default function LoginPage() {
       <div className="flex w-full items-center justify-center bg-gray-50 px-6 py-12 lg:w-1/2">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="font-bold text-gray-900">Masjid Darussalam</p>
-              <p className="text-xs text-gray-500">Management Dashboard</p>
-            </div>
+          <div className="mb-8 lg:hidden">
+            <AppLogo size="md" />
+            <p className="mt-1 text-xs text-gray-500">Management Dashboard</p>
           </div>
 
           <div className="mb-8">
@@ -147,8 +143,8 @@ export default function LoginPage() {
                   type="email"
                   placeholder="admin@darussalam.or.id"
                   className={`h-11 w-full rounded-xl border bg-white pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${errors.email
-                      ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-                      : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
+                    ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                    : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
                     }`}
                   {...register('email', {
                     required: 'Email wajib diisi',
@@ -175,8 +171,8 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Masukkan password"
                   className={`h-11 w-full rounded-xl border bg-white pl-10 pr-11 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 ${errors.password
-                      ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-                      : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
+                    ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                    : 'border-gray-200 focus:border-emerald-400 focus:ring-emerald-100'
                     }`}
                   {...register('password', { required: 'Password wajib diisi' })}
                 />

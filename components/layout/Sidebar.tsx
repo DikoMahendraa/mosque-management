@@ -17,10 +17,10 @@ import {
   // Clock,
   Settings,
   X,
-  Building2,
 } from 'lucide-react';
 import { useSidebarStore } from '@/store';
 import { cn } from '@/lib/utils';
+import { AppLogo } from '@/components/ui/AppLogo';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -61,16 +61,14 @@ export default function Sidebar() {
         )}
       >
         {/* Header */}
-        <div className="flex h-16 items-center justify-between px-4 border-b border-primary/20 bg-primary">
+        <div className="flex h-16 items-center justify-between px-4 border-b border-primary/20 bg-white">
           <div className={cn('flex items-center gap-3', !isOpen && 'lg:justify-center')}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary border border-primary">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
+            <AppLogo
+              size={isOpen || isMobileOpen ? 'md' : 'sm'}
+              className="shrink-0 text-primary"
+            />
             {(isOpen || isMobileOpen) && (
-              <div>
-                <p className="text-lg font-bold text-white leading-none">Darussalam</p>
-                <p className="text-xs text-white mt-0.5">Dashboard</p>
-              </div>
+              <p className="text-sm text-primary font-semibold">Masjid Darussalam</p>
             )}
           </div>
           <button
