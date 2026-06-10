@@ -303,3 +303,33 @@ export interface DashboardStats {
   upcoming_events: MosqueEvent[];
   upcoming_kajian: Kajian[];
 }
+
+// ============================================================
+// USTAD TYPES
+// ============================================================
+
+export interface Ustad {
+  id: string;
+  nama: string;
+  nomor_whatsapp: string;
+  alamat: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type UstadFormData = Omit<Ustad, 'id' | 'created_at' | 'updated_at'>;
+
+// ============================================================
+// JAMAAH TYPES
+// ============================================================
+
+export interface Jamaah {
+  id: string;
+  nama: string;
+  nomor_whatsapp: string;
+  alamat: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type JamaahFormData = Omit<Jamaah, 'id' | 'created_at' | 'updated_at'>;

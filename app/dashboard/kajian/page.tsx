@@ -12,10 +12,12 @@ import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import { useKajianList, useCreateKajian, useUpdateKajian, useDeleteKajian } from '@/hooks/useKajian';
+import { useUstadList } from '@/hooks/useUstad';
 import { Kajian, KajianFormData } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
@@ -41,6 +43,7 @@ export default function KajianPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data, isLoading } = useKajianList({ page, limit: 8, search, status: statusFilter });
+  const { data: ustadData } = useUstadList({ limit: 100 });
   const createMutation = useCreateKajian();
   const updateMutation = useUpdateKajian();
   const deleteMutation = useDeleteKajian();
@@ -48,6 +51,13 @@ export default function KajianPage() {
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<KajianFormData>({
     defaultValues,
   });
+
+  const ustadOptions = [
+    ...(ustadData?.data ?? []).map((ustad) => ({
+      value: ustad.nama,
+      label: ustad.nama,
+    })),
+  ];
 
   const openCreate = () => {
     setEditItem(null);
@@ -199,7 +209,24 @@ export default function KajianPage() {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editItem ? 'Edit Kajian' : 'Tambah Kajian'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input label="Judul Kajian" required error={errors.title?.message} {...register('title', { required: 'Judul wajib diisi' })} />
-          <Input label="Pemateri" required error={errors.speaker?.message} {...register('speaker', { required: 'Pemateri wajib diisi' })} />
+          <Controller
+            name="speaker"
+            control={control}
+            rules={{ required: 'Pemateri wajib diisi' }}
+            render={({ field }) => (
+              <SearchableSelect
+                label="Pemateri"
+                placeholder="Pilih pemateri..."
+                searchPlaceholder="Cari pemateri..."
+                emptyMessage="Tidak ada pemateri. Tambahkan di menu Daftar Ustad."
+                required
+                options={ustadOptions}
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.speaker?.message}
+              />
+            )}
+          />
           <div className="grid grid-cols-2 gap-4">
             <Input label="Tanggal" type="date" required error={errors.date?.message} {...register('date', { required: 'Tanggal wajib diisi' })} />
             <Input label="Waktu" type="time" required error={errors.time?.message} {...register('time', { required: 'Waktu wajib diisi' })} />
