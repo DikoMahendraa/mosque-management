@@ -1,18 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { Save, User, Bell, Shield, Palette } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, User, Bell, Shield, Palette, MessageSquare } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store';
+import { useWhatsAppSettings, useUpdateWhatsAppSettings } from '@/hooks/useSettings';
 
-type Tab = 'profile' | 'notifications' | 'security' | 'appearance';
+type Tab = 'profile' | 'notifications' | 'security' | 'appearance' | 'whatsapp';
 
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'profile', label: 'Profil', icon: User },
+  { key: 'whatsapp', label: 'WhatsApp API', icon: MessageSquare },
   { key: 'notifications', label: 'Notifikasi', icon: Bell },
   { key: 'security', label: 'Keamanan', icon: Shield },
   { key: 'appearance', label: 'Tampilan', icon: Palette },
@@ -26,11 +29,44 @@ export default function SettingsPage() {
   const [email, setEmail] = useState(user?.email ?? '');
   const [isSaving, setIsSaving] = useState(false);
 
+  // WhatsApp API settings
+  const { data: whatsappSettings, isLoading: isLoadingWhatsApp } = useWhatsAppSettings();
+  const updateWhatsAppMutation = useUpdateWhatsAppSettings();
+
+  const [waEnabled, setWaEnabled] = useState(false);
+  const [waProvider, setWaProvider] = useState<'fonnte' | 'wablas' | 'twilio'>('fonnte');
+  const [waToken, setWaToken] = useState('');
+  const [waDevice, setWaDevice] = useState('');
+
+  // Load WhatsApp settings when data arrives
+  useEffect(() => {
+    if (whatsappSettings) {
+      setWaEnabled(whatsappSettings.enabled);
+      setWaProvider(whatsappSettings.provider);
+      setWaToken(whatsappSettings.token);
+      setWaDevice(whatsappSettings.device);
+    }
+  }, [whatsappSettings]);
+
   const handleSaveProfile = async () => {
     setIsSaving(true);
     await new Promise((r) => setTimeout(r, 600));
     setIsSaving(false);
     toast('success', 'Profil disimpan', 'Data profil berhasil diupdate');
+  };
+
+  const handleSaveWhatsApp = async () => {
+    try {
+      await updateWhatsAppMutation.mutateAsync({
+        enabled: waEnabled,
+        provider: waProvider,
+        token: waToken,
+        device: waDevice,
+      });
+      toast('success', 'Berhasil', 'Pengaturan WhatsApp API berhasil disimpan');
+    } catch {
+      toast('error', 'Gagal', 'Terjadi kesalahan saat menyimpan');
+    }
   };
 
   return (
@@ -85,6 +121,106 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </div>
+            </Card>
+          )}
+
+          {activeTab === 'whatsapp' && (
+            <Card padding="md">
+              <h3 className="mb-4 text-base font-semibold text-gray-900">Pengaturan WhatsApp API</h3>
+              <p className="mb-6 text-sm text-gray-600">
+                Konfigurasi WhatsApp API untuk mengirim broadcast kajian dan event ke jamaah.
+              </p>
+              
+              {isLoadingWhatsApp ? (
+                <div className="text-center py-8 text-gray-500">Memuat pengaturan...</div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-gray-100 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">Aktifkan WhatsApp API</p>
+                        <p className="text-xs text-gray-500">
+                          Fitur broadcast akan muncul di halaman Kajian dan Events
+                        </p>
+                      </div>
+                      <label className="relative inline-flex cursor-pointer items-center">
+                        <input 
+                          type="checkbox" 
+                          checked={waEnabled}
+                          onChange={(e) => setWaEnabled(e.target.checked)}
+                          className="peer sr-only" 
+                        />
+                        <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full" />
+                      </label>
+                    </div>
+                  </div>
+
+                  {waEnabled && (
+                    <>
+                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                        <p className="text-sm text-emerald-800 font-medium mb-2">📱 Panduan Setup:</p>
+                        <ol className="text-xs text-emerald-700 space-y-1 ml-4 list-decimal">
+                          <li>Pilih provider WhatsApp API (rekomendasi: Fonnte)</li>
+                          <li>Daftar di website provider dan dapatkan API Token</li>
+                          <li>Masukkan API Token dan Device/Sender di bawah ini</li>
+                          <li>Simpan pengaturan dan test broadcast</li>
+                        </ol>
+                      </div>
+
+                      <Select
+                        label="Provider WhatsApp API"
+                        value={waProvider}
+                        onChange={(e) => setWaProvider(e.target.value as any)}
+                        options={[
+                          { value: 'fonnte', label: 'Fonnte.com (Rekomendasi)' },
+                          { value: 'wablas', label: 'Wablas.com' },
+                          { value: 'twilio', label: 'Twilio' },
+                        ]}
+                      />
+
+                      <Input
+                        label="API Token / Key"
+                        type="password"
+                        value={waToken}
+                        onChange={(e) => setWaToken(e.target.value)}
+                        placeholder="Masukkan API token dari provider"
+                      />
+
+                      <Input
+                        label="Device / Sender Number (Optional)"
+                        value={waDevice}
+                        onChange={(e) => setWaDevice(e.target.value)}
+                        placeholder="Contoh: 628123456789"
+                      />
+
+                      <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                        <p className="text-xs text-blue-800">
+                          💡 <strong>Tip:</strong> Pastikan nomor WhatsApp sudah terverifikasi di provider yang Anda pilih. 
+                          Untuk Fonnte, kunjit{' '}
+                          <a 
+                            href="https://fonnte.com" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="underline font-medium"
+                          >
+                            fonnte.com
+                          </a>
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex justify-end pt-2">
+                    <Button 
+                      onClick={handleSaveWhatsApp} 
+                      isLoading={updateWhatsAppMutation.isPending}
+                      leftIcon={<Save className="h-4 w-4" />}
+                    >
+                      Simpan Pengaturan
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
           )}
 

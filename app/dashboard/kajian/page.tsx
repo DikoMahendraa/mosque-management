@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, BookOpen } from 'lucide-react';
+import { Plus, Pencil, Trash2, BookOpen, Send } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -18,10 +18,12 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import { useKajianList, useCreateKajian, useUpdateKajian, useDeleteKajian } from '@/hooks/useKajian';
 import { useUstadList } from '@/hooks/useUstad';
+import { useWhatsAppSettings } from '@/hooks/useSettings';
 import { Kajian, KajianFormData } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { useForm, Controller } from 'react-hook-form';
+import BroadcastModal from '@/components/broadcast/BroadcastModal';
 
 const defaultValues: KajianFormData = {
   title: '',
@@ -41,9 +43,11 @@ export default function KajianPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<Kajian | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [broadcastItem, setBroadcastItem] = useState<Kajian | null>(null);
 
   const { data, isLoading } = useKajianList({ page, limit: 8, search, status: statusFilter });
   const { data: ustadData } = useUstadList({ limit: 100 });
+  const { data: whatsappSettings } = useWhatsAppSettings();
   const createMutation = useCreateKajian();
   const updateMutation = useUpdateKajian();
   const deleteMutation = useDeleteKajian();
@@ -105,6 +109,10 @@ export default function KajianPage() {
     } catch {
       toast('error', 'Gagal', 'Terjadi kesalahan');
     }
+  };
+
+  const handleBroadcast = (kajian: Kajian) => {
+    setBroadcastItem(kajian);
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -177,6 +185,17 @@ export default function KajianPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          {whatsappSettings?.enabled && item.status === 'upcoming' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleBroadcast(item)}
+                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              title="Broadcast ke Jamaah"
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -256,6 +275,20 @@ export default function KajianPage() {
       </Modal>
 
       <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} isLoading={deleteMutation.isPending} />
+      
+      <BroadcastModal
+        isOpen={!!broadcastItem}
+        onClose={() => setBroadcastItem(null)}
+        title={broadcastItem?.title ?? ''}
+        eventType="kajian"
+        eventData={{
+          title: broadcastItem?.title ?? '',
+          date: broadcastItem?.date ?? '',
+          time: broadcastItem?.time ?? '',
+          location: broadcastItem?.location ?? '',
+          speaker: broadcastItem?.speaker ?? '',
+        }}
+      />
     </DashboardLayout>
   );
 }

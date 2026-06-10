@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, CalendarDays } from 'lucide-react';
+import { Plus, Pencil, Trash2, CalendarDays, Send } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -16,10 +16,12 @@ import RichTextEditor from '@/components/ui/RichTextEditor';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import { useEventList, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/hooks/useEvents';
+import { useWhatsAppSettings } from '@/hooks/useSettings';
 import { MosqueEvent, EventFormData } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { useForm, Controller } from 'react-hook-form';
+import BroadcastModal from '@/components/broadcast/BroadcastModal';
 
 const defaultValues: EventFormData = {
   title: '',
@@ -37,8 +39,10 @@ export default function EventsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<MosqueEvent | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [broadcastItem, setBroadcastItem] = useState<MosqueEvent | null>(null);
 
   const { data, isLoading } = useEventList({ page, limit: 8, search, status: statusFilter });
+  const { data: whatsappSettings } = useWhatsAppSettings();
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
   const deleteMutation = useDeleteEvent();
@@ -72,6 +76,10 @@ export default function EventsPage() {
       toast('success', 'Berhasil', 'Event berhasil dihapus');
       setDeleteId(null);
     } catch { toast('error', 'Gagal', 'Terjadi kesalahan'); }
+  };
+
+  const handleBroadcast = (event: MosqueEvent) => {
+    setBroadcastItem(event);
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -117,6 +125,17 @@ export default function EventsPage() {
                         <td className="px-4 py-3"><Badge variant={statusBadge(item.status)}>{item.status === 'upcoming' ? 'Mendatang' : 'Selesai'}</Badge></td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1">
+                            {whatsappSettings?.enabled && item.status === 'upcoming' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleBroadcast(item)}
+                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                title="Broadcast ke Jamaah"
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="sm" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => setDeleteId(item.id)} className="text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                           </div>
@@ -148,6 +167,18 @@ export default function EventsPage() {
         </form>
       </Modal>
       <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} isLoading={deleteMutation.isPending} />
+      
+      <BroadcastModal
+        isOpen={!!broadcastItem}
+        onClose={() => setBroadcastItem(null)}
+        title={broadcastItem?.title ?? ''}
+        eventType="event"
+        eventData={{
+          title: broadcastItem?.title ?? '',
+          date: broadcastItem?.event_date ?? '',
+          location: broadcastItem?.location ?? '',
+        }}
+      />
     </DashboardLayout>
   );
 }

@@ -333,3 +333,58 @@ export interface Jamaah {
 }
 
 export type JamaahFormData = Omit<Jamaah, 'id' | 'created_at' | 'updated_at'>;
+
+// ============================================================
+// APP SETTINGS TYPES
+// ============================================================
+
+export interface AppSetting {
+  id: string;
+  setting_key: string;
+  setting_value: string;
+  setting_type: 'string' | 'boolean' | 'number' | 'json';
+  description: string;
+  updated_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WhatsAppSettings {
+  enabled: boolean;
+  provider: 'fonnte' | 'wablas' | 'twilio';
+  token: string;
+  device: string;
+}
+
+// ============================================================
+// BROADCAST TYPES
+// ============================================================
+
+export interface BroadcastMessage {
+  id: string;
+  reference_type: 'kajian' | 'event';
+  reference_id: string;
+  title: string;
+  message: string;
+  recipient_type: 'all' | 'selected';
+  status: 'draft' | 'sending' | 'completed' | 'failed';
+  total_recipients: number;
+  sent_count: number;
+  failed_count: number;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  sent_at?: string;
+}
+
+export interface BroadcastRecipient {
+  id: string;
+  broadcast_id: string;
+  jamaah_id: string;
+  jamaah_name: string;
+  jamaah_phone: string;
+  status: 'pending' | 'sent' | 'failed';
+  error_message?: string;
+  sent_at?: string;
+  created_at: string;
+}
