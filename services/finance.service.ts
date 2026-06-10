@@ -1,8 +1,45 @@
-import { FinanceTransaction, FinanceFormData, FinanceSummary, MonthlyFinanceData, ApiResponse, PaginationMeta } from '@/types';
-import { mockFinance } from '@/lib/mock-data';
-import { generateId } from '@/lib/utils';
-let financeData: FinanceTransaction[] = [...mockFinance];
-const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+import { createClient } from '@/lib/supabase/client';
+import {
+  FinanceTransaction,
+  FinanceFormData,
+  FinanceSummary,
+  MonthlyFinanceData,
+  ApiResponse,
+} from '@/types';
+
+function mapFinanceTransaction(row: Record<string, unknown>): FinanceTransaction {
+  const date = typeof row.date === 'string' ? row.date.slice(0, 10) : String(row.date ?? '');
+
+  return {
+    id: String(row.id),
+    title: String(row.title ?? ''),
+    category: String(row.category ?? ''),
+    amount: Number(row.amount ?? 0),
+    date,
+    description: String(row.description ?? ''),
+    type: row.type as FinanceTransaction['type'],
+    created_at: String(row.created_at ?? ''),
+    updated_at: String(row.updated_at ?? ''),
+  };
+}
+
+function buildMonthlyData(
+  rows: Array<{ type: string; amount: number; date: string }>
+): MonthlyFinanceData[] {
+  const monthsMap = new Map<string, MonthlyFinanceData>();
+
+  rows.forEach((row) => {
+    const month = row.date.slice(0, 7);
+    if (!monthsMap.has(month)) {
+      monthsMap.set(month, { month, income: 0, expense: 0 });
+    }
+    const entry = monthsMap.get(month)!;
+    if (row.type === 'income') entry.income += row.amount;
+    else entry.expense += row.amount;
+  });
+
+  return Array.from(monthsMap.values()).sort((a, b) => a.month.localeCompare(b.month));
+}
 
 export const financeService = {
   async getAll(params?: {
@@ -12,89 +49,132 @@ export const financeService = {
     type?: string;
     month?: string;
   }): Promise<ApiResponse<FinanceTransaction[]>> {
-    await delay();
-    let data = [...financeData];
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      data = data.filter(
-        (f) => f.title.toLowerCase().includes(q) || f.category.toLowerCase().includes(q)
-      );
-    }
-    if (params?.type) {
-      data = data.filter((f) => f.type === params.type);
-    }
-    if (params?.month) {
-      data = data.filter((f) => f.date.startsWith(params.month!));
-    }
-
-    data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
+    const supabase = createClient();
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 10;
-    const total = data.length;
-    const totalPages = Math.ceil(total / limit);
-    const paginatedData = data.slice((page - 1) * limit, page * limit);
-    const meta: PaginationMeta = { page, limit, total, totalPages };
-    return { data: paginatedData, meta };
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from('finance_transactions')
+      .select('*', { count: 'exact' })
+      .order('date', { ascending: false });
+
+    if (params?.type) {
+      query = query.eq('type', params.type);
+    }
+
+    if (params?.month) {
+      const start = `${params.month}-01`;
+      const end = new Date(
+        Number(params.month.slice(0, 4)),
+        Number(params.month.slice(5, 7)),
+        0
+      );
+      const endDate = `${params.month}-${String(end.getDate()).padStart(2, '0')}`;
+      query = query.gte('date', start).lte('date', endDate);
+    }
+
+    if (params?.search) {
+      const q = `%${params.search.trim()}%`;
+      query = query.or(`title.ilike.${q},category.ilike.${q}`);
+    }
+
+    const { data, error, count } = await query.range(from, to);
+    if (error) throw new Error(error.message);
+
+    const total = count ?? 0;
+    return {
+      data: (data ?? []).map((row: Record<string, unknown>) => mapFinanceTransaction(row)),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   },
 
   async getById(id: string): Promise<ApiResponse<FinanceTransaction>> {
-    await delay();
-    const item = financeData.find((f) => f.id === id);
-    if (!item) throw new Error('Transaction not found');
-    return { data: item };
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('finance_transactions')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { data: mapFinanceTransaction(data) };
   },
 
   async create(payload: FinanceFormData): Promise<ApiResponse<FinanceTransaction>> {
-    await delay();
-    const newItem: FinanceTransaction = {
-      ...payload,
-      id: generateId(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    financeData = [newItem, ...financeData];
-    return { data: newItem, message: 'Transaksi berhasil ditambahkan' };
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from('finance_transactions')
+      .insert({
+        ...payload,
+        ...(user ? { created_by: user.id } : {}),
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { data: mapFinanceTransaction(data), message: 'Transaksi berhasil ditambahkan' };
   },
 
-  async update(id: string, payload: Partial<FinanceFormData>): Promise<ApiResponse<FinanceTransaction>> {
-    await delay();
-    const index = financeData.findIndex((f) => f.id === id);
-    if (index === -1) throw new Error('Transaction not found');
-    financeData[index] = { ...financeData[index], ...payload, updated_at: new Date().toISOString() };
-    return { data: financeData[index], message: 'Transaksi berhasil diupdate' };
+  async update(
+    id: string,
+    payload: Partial<FinanceFormData>
+  ): Promise<ApiResponse<FinanceTransaction>> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('finance_transactions')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { data: mapFinanceTransaction(data), message: 'Transaksi berhasil diupdate' };
   },
 
   async delete(id: string): Promise<ApiResponse<null>> {
-    await delay();
-    financeData = financeData.filter((f) => f.id !== id);
+    const supabase = createClient();
+    const { error } = await supabase.from('finance_transactions').delete().eq('id', id);
+    if (error) throw new Error(error.message);
     return { data: null, message: 'Transaksi berhasil dihapus' };
   },
 
   async getSummary(): Promise<ApiResponse<FinanceSummary>> {
-    await delay();
-    const total_income = financeData.filter((f) => f.type === 'income').reduce((s, f) => s + f.amount, 0);
-    const total_expense = financeData.filter((f) => f.type === 'expense').reduce((s, f) => s + f.amount, 0);
-    const balance = total_income - total_expense;
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('finance_transactions')
+      .select('type, amount, date');
 
-    const monthsMap = new Map<string, MonthlyFinanceData>();
-    financeData.forEach((f) => {
-      const month = f.date.slice(0, 7);
-      if (!monthsMap.has(month)) {
-        monthsMap.set(month, { month, income: 0, expense: 0 });
-      }
-      const entry = monthsMap.get(month)!;
-      if (f.type === 'income') entry.income += f.amount;
-      else entry.expense += f.amount;
-    });
+    if (error) throw new Error(error.message);
 
-    const monthly_data = Array.from(monthsMap.values()).sort((a, b) =>
-      a.month.localeCompare(b.month)
-    );
+    const rows = (data ?? []).map((row) => ({
+      type: String(row.type),
+      amount: Number(row.amount ?? 0),
+      date: typeof row.date === 'string' ? row.date.slice(0, 10) : String(row.date ?? ''),
+    }));
+
+    const total_income = rows
+      .filter((r) => r.type === 'income')
+      .reduce((sum, r) => sum + r.amount, 0);
+    const total_expense = rows
+      .filter((r) => r.type === 'expense')
+      .reduce((sum, r) => sum + r.amount, 0);
 
     return {
-      data: { total_income, total_expense, balance, monthly_data },
+      data: {
+        total_income,
+        total_expense,
+        balance: total_income - total_expense,
+        monthly_data: buildMonthlyData(rows),
+      },
     };
   },
 };
