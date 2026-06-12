@@ -98,11 +98,22 @@ export interface Kajian {
   location: string;
   poster_image: string;
   status: 'upcoming' | 'finished';
+  registration_count?: number;
   created_at: string;
   updated_at: string;
 }
 
-export type KajianFormData = Omit<Kajian, 'id' | 'created_at' | 'updated_at'>;
+export type KajianFormData = Omit<Kajian, 'id' | 'created_at' | 'updated_at' | 'registration_count'>;
+
+export interface KajianRegistration {
+  id: string;
+  kajian_id: string;
+  name: string;
+  address: string;
+  age: number;
+  phone: string | null;
+  created_at: string;
+}
 
 // ============================================================
 // EVENT TYPES

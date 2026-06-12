@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, BookOpen, Send, QrCode } from 'lucide-react';
+import { Plus, Pencil, Trash2, BookOpen, Send, QrCode, Users, Eye } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -25,6 +25,8 @@ import { formatDate } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { useForm, Controller } from 'react-hook-form';
 import BroadcastModal from '@/components/broadcast/BroadcastModal';
+import KajianRegistrationsModal from '@/components/kajian/KajianRegistrationsModal';
+import KajianDetailModal from '@/components/kajian/KajianDetailModal';
 
 const defaultValues: KajianFormData = {
   title: '',
@@ -46,6 +48,8 @@ export default function KajianPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [broadcastItem, setBroadcastItem] = useState<Kajian | null>(null);
   const [qrCodeItem, setQrCodeItem] = useState<Kajian | null>(null);
+  const [registrationsItem, setRegistrationsItem] = useState<Kajian | null>(null);
+  const [detailItem, setDetailItem] = useState<Kajian | null>(null);
 
   const { data, isLoading } = useKajianList({ page, limit: 8, search, status: statusFilter });
   const { data: ustadData } = useUstadList({ limit: 100 });
@@ -160,13 +164,14 @@ export default function KajianPage() {
         ) : (
           <>
             <div className="overflow-x-auto rounded-xl border border-gray-100">
-              <table className="w-full min-w-[700px] text-sm">
+              <table className="w-full min-w-[780px] text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     <th className="px-4 py-3">Judul</th>
                     <th className="px-4 py-3">Pemateri</th>
                     <th className="px-4 py-3">Tanggal</th>
                     <th className="px-4 py-3">Lokasi</th>
+                    <th className="px-4 py-3">Pendaftar</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 text-right">Aksi</th>
                   </tr>
@@ -175,7 +180,14 @@ export default function KajianPage() {
                   {data?.data.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-4 py-3">
-                        <p className="font-medium text-gray-800 line-clamp-1">{item.title}</p>
+                        <button
+                          type="button"
+                          onClick={() => setDetailItem(item)}
+                          className="text-left font-medium text-gray-800 line-clamp-1 hover:text-emerald-700 transition-colors"
+                          title="Lihat detail"
+                        >
+                          {item.title}
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{item.speaker}</td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
@@ -185,12 +197,32 @@ export default function KajianPage() {
                         <p className="truncate">{item.location}</p>
                       </td>
                       <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => setRegistrationsItem(item)}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-violet-700 hover:bg-violet-50 transition-colors"
+                          title="Lihat pendaftar"
+                        >
+                          <Users className="h-4 w-4" />
+                          {item.registration_count ?? 0}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3">
                         <Badge variant={statusBadge(item.status)}>
                           {item.status === 'upcoming' ? 'Mendatang' : 'Selesai'}
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDetailItem(item)}
+                            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                            title="Lihat detail"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -311,6 +343,21 @@ export default function KajianPage() {
         title={qrCodeItem?.title ?? ''}
         url={`https://digital-mosque.vercel.app/kajian/${qrCodeItem?.id}`}
         description="Scan QR code ini untuk melihat detail kajian"
+      />
+
+      <KajianRegistrationsModal
+        isOpen={!!registrationsItem}
+        onClose={() => setRegistrationsItem(null)}
+        kajianId={registrationsItem?.id ?? null}
+        kajianTitle={registrationsItem?.title ?? ''}
+      />
+
+      <KajianDetailModal
+        isOpen={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        kajian={detailItem}
+        onEdit={openEdit}
+        onViewRegistrations={setRegistrationsItem}
       />
     </DashboardLayout>
   );

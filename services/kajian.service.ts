@@ -4,6 +4,8 @@ import { Kajian, KajianFormData, ApiResponse } from '@/types';
 function mapKajian(row: Record<string, unknown>): Kajian {
   const time = typeof row.time === 'string' ? row.time.slice(0, 5) : String(row.time ?? '');
   const date = typeof row.date === 'string' ? row.date.slice(0, 10) : String(row.date ?? '');
+  const registrations = row.kajian_registrations as { count: number }[] | undefined;
+  const registration_count = registrations?.[0]?.count ?? 0;
 
   return {
     id: String(row.id),
@@ -15,6 +17,7 @@ function mapKajian(row: Record<string, unknown>): Kajian {
     location: String(row.location ?? ''),
     poster_image: String(row.poster_image ?? ''),
     status: row.status as Kajian['status'],
+    registration_count,
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
   };
@@ -35,7 +38,7 @@ export const kajianService = {
 
     let query = supabase
       .from('kajian')
-      .select('*', { count: 'exact' })
+      .select('*, kajian_registrations(count)', { count: 'exact' })
       .order('date', { ascending: false });
 
     if (params?.status) {
