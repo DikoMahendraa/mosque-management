@@ -233,7 +233,7 @@ export default function EventsPage() {
         isOpen={!!qrCodeItem}
         onClose={() => setQrCodeItem(null)}
         title={qrCodeItem?.title ?? ''}
-        url={`https://digital-mosque.vercel.app/events/${qrCodeItem?.id}`}
+        url={`https://masjiddarussalaml.vercel.app/events/${qrCodeItem?.id}`}
         description="Scan QR code ini untuk melihat detail event"
       />
 

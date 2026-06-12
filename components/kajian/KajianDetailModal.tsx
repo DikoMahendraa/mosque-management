@@ -7,7 +7,7 @@ import { Kajian } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { BookOpen, CalendarDays, Clock, MapPin, User, Users, ExternalLink, Pencil } from 'lucide-react';
 
-const LANDING_PAGE_BASE = 'https://digital-mosque.vercel.app/kajian';
+const LANDING_PAGE_BASE = 'https://masjiddarussalaml.vercel.app//kajian';
 
 interface KajianDetailModalProps {
   isOpen: boolean;

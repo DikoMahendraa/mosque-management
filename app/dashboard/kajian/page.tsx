@@ -341,7 +341,7 @@ export default function KajianPage() {
         isOpen={!!qrCodeItem}
         onClose={() => setQrCodeItem(null)}
         title={qrCodeItem?.title ?? ''}
-        url={`https://digital-mosque.vercel.app/kajian/${qrCodeItem?.id}`}
+        url={`https://masjiddarussalaml.vercel.app/kajian/${qrCodeItem?.id}`}
         description="Scan QR code ini untuk melihat detail kajian"
       />
 

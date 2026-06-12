@@ -7,7 +7,7 @@ import { MosqueEvent } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { CalendarDays, MapPin, Users, ExternalLink, Pencil } from 'lucide-react';
 
-const LANDING_PAGE_BASE = 'https://digital-mosque.vercel.app/events';
+const LANDING_PAGE_BASE = 'https://masjiddarussalaml.vercel.app/events';
 
 interface EventDetailModalProps {
   isOpen: boolean;
