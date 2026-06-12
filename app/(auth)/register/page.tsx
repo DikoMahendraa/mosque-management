@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, User, CheckCircle2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store';
 import { AppLogo } from '@/components/ui/AppLogo';
@@ -27,13 +27,13 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<RegisterForm>({
     defaultValues: { name: '', email: '', password: '', confirm_password: '', agree: false },
   });
 
-  const passwordValue = watch('password');
+  const passwordValue = useWatch({ control, name: 'password' });
 
   const onSubmit = async (data: RegisterForm) => {
     setServerError('');

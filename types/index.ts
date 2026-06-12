@@ -30,7 +30,7 @@ export interface User {
   user_metadata?: {
     name?: string;
     role?: 'admin' | 'editor' | 'viewer';
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

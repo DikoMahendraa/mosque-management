@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Save, User, Bell, Shield, Palette, MessageSquare } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -12,6 +12,14 @@ import { useAuthStore } from '@/store';
 import { useWhatsAppSettings, useUpdateWhatsAppSettings } from '@/hooks/useSettings';
 
 type Tab = 'profile' | 'notifications' | 'security' | 'appearance' | 'whatsapp';
+type WhatsAppProvider = 'fonnte' | 'wablas' | 'twilio';
+
+interface WhatsAppFormState {
+  enabled: boolean;
+  provider: WhatsAppProvider;
+  token: string;
+  device: string;
+}
 
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'profile', label: 'Profil', icon: User },
@@ -33,20 +41,18 @@ export default function SettingsPage() {
   const { data: whatsappSettings, isLoading: isLoadingWhatsApp } = useWhatsAppSettings();
   const updateWhatsAppMutation = useUpdateWhatsAppSettings();
 
-  const [waEnabled, setWaEnabled] = useState(false);
-  const [waProvider, setWaProvider] = useState<'fonnte' | 'wablas' | 'twilio'>('fonnte');
-  const [waToken, setWaToken] = useState('');
-  const [waDevice, setWaDevice] = useState('');
+  const [waDraft, setWaDraft] = useState<WhatsAppFormState | null>(null);
 
-  // Load WhatsApp settings when data arrives
-  useEffect(() => {
-    if (whatsappSettings) {
-      setWaEnabled(whatsappSettings.enabled);
-      setWaProvider(whatsappSettings.provider);
-      setWaToken(whatsappSettings.token);
-      setWaDevice(whatsappSettings.device);
-    }
-  }, [whatsappSettings]);
+  const waForm: WhatsAppFormState = waDraft ?? {
+    enabled: whatsappSettings?.enabled ?? false,
+    provider: whatsappSettings?.provider ?? 'fonnte',
+    token: whatsappSettings?.token ?? '',
+    device: whatsappSettings?.device ?? '',
+  };
+
+  const updateWaForm = (patch: Partial<WhatsAppFormState>) => {
+    setWaDraft({ ...waForm, ...patch });
+  };
 
   const handleSaveProfile = async () => {
     setIsSaving(true);
@@ -58,11 +64,12 @@ export default function SettingsPage() {
   const handleSaveWhatsApp = async () => {
     try {
       await updateWhatsAppMutation.mutateAsync({
-        enabled: waEnabled,
-        provider: waProvider,
-        token: waToken,
-        device: waDevice,
+        enabled: waForm.enabled,
+        provider: waForm.provider,
+        token: waForm.token,
+        device: waForm.device,
       });
+      setWaDraft(null);
       toast('success', 'Berhasil', 'Pengaturan WhatsApp API berhasil disimpan');
     } catch {
       toast('error', 'Gagal', 'Terjadi kesalahan saat menyimpan');
@@ -146,8 +153,8 @@ export default function SettingsPage() {
                       <label className="relative inline-flex cursor-pointer items-center">
                         <input 
                           type="checkbox" 
-                          checked={waEnabled}
-                          onChange={(e) => setWaEnabled(e.target.checked)}
+                          checked={waForm.enabled}
+                          onChange={(e) => updateWaForm({ enabled: e.target.checked })}
                           className="peer sr-only" 
                         />
                         <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full" />
@@ -155,7 +162,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {waEnabled && (
+                  {waForm.enabled && (
                     <>
                       <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
                         <p className="text-sm text-emerald-800 font-medium mb-2">📱 Panduan Setup:</p>
@@ -169,8 +176,8 @@ export default function SettingsPage() {
 
                       <Select
                         label="Provider WhatsApp API"
-                        value={waProvider}
-                        onChange={(e) => setWaProvider(e.target.value as any)}
+                        value={waForm.provider}
+                        onChange={(e) => updateWaForm({ provider: e.target.value as WhatsAppProvider })}
                         options={[
                           { value: 'fonnte', label: 'Fonnte.com (Rekomendasi)' },
                           { value: 'wablas', label: 'Wablas.com' },
@@ -181,15 +188,15 @@ export default function SettingsPage() {
                       <Input
                         label="API Token / Key"
                         type="password"
-                        value={waToken}
-                        onChange={(e) => setWaToken(e.target.value)}
+                        value={waForm.token}
+                        onChange={(e) => updateWaForm({ token: e.target.value })}
                         placeholder="Masukkan API token dari provider"
                       />
 
                       <Input
                         label="Device / Sender Number (Optional)"
-                        value={waDevice}
-                        onChange={(e) => setWaDevice(e.target.value)}
+                        value={waForm.device}
+                        onChange={(e) => updateWaForm({ device: e.target.value })}
                         placeholder="Contoh: 628123456789"
                       />
 

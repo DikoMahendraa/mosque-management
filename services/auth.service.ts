@@ -1,5 +1,6 @@
 import { User } from '@/types';
 import { createClient } from '@/lib/supabase/client';
+import type { Session } from '@supabase/supabase-js';
 
 interface LoginPayload {
   email: string;
@@ -14,7 +15,7 @@ interface RegisterPayload {
 
 interface AuthResponse {
   user: User;
-  session: any; // Supabase session
+  session: Session | null;
 }
 
 export const authService = {
@@ -96,7 +97,7 @@ export const authService = {
     }
   },
 
-  async getCurrentSession(): Promise<any> {
+  async getCurrentSession(): Promise<Session | null> {
     const supabase = createClient();
     const { data: { session }, error } = await supabase.auth.getSession();
     

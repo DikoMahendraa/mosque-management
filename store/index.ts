@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { Session } from '@supabase/supabase-js';
 import { User } from '@/types';
 
 // ============================================================
@@ -37,10 +38,10 @@ interface AuthStore {
   user: User | null;
   isAuthenticated: boolean;
   isInitialized: boolean;
-  session: any | null;
-  login: (user: User, session?: any) => void;
+  session: Session | null;
+  login: (user: User, session?: Session | null) => void;
   logout: () => void;
-  setSession: (session: any) => void;
+  setSession: (session: Session | null) => void;
   initializeAuth: () => Promise<void>;
 }
 

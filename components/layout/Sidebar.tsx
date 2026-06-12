@@ -22,6 +22,7 @@ import {
 import { useSidebarStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { AppLogo } from '@/components/ui/AppLogo';
+import { APP_VERSION } from '@/lib/version';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -127,9 +128,10 @@ export default function Sidebar() {
         {/* Footer */}
         <div className="border-t border-primary px-3 py-3">
           {(isOpen || isMobileOpen) && (
-            <p className="text-center text-xs text-white">
-              © 2026 Masjid Darussalam
-            </p>
+            <div className="text-center text-xs text-white/80 space-y-0.5">
+              <p>© 2026 Masjid Darussalam</p>
+              <p>v{APP_VERSION}</p>
+            </div>
           )}
         </div>
       </aside>

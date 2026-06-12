@@ -49,7 +49,7 @@ export function getMonthName(month: string) {
   return dayjs(month + '-01').format('MMMM YYYY');
 }
 
-export function exportToCSV(data: any[], filename: string) {
+export function exportToCSV(data: Record<string, unknown>[], filename: string) {
   if (data.length === 0) {
     alert('Tidak ada data untuk diekspor');
     return;
