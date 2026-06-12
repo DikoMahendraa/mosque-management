@@ -3,6 +3,8 @@ import { MosqueEvent, EventFormData, ApiResponse } from '@/types';
 
 function mapEvent(row: Record<string, unknown>): MosqueEvent {
   const event_date = typeof row.event_date === 'string' ? row.event_date.slice(0, 10) : String(row.event_date ?? '');
+  const registrations = row.event_registrations as { count: number }[] | undefined;
+  const registration_count = registrations?.[0]?.count ?? 0;
 
   return {
     id: String(row.id),
@@ -12,6 +14,7 @@ function mapEvent(row: Record<string, unknown>): MosqueEvent {
     location: String(row.location ?? ''),
     poster: String(row.poster ?? ''),
     status: row.status as MosqueEvent['status'],
+    registration_count,
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
   };
@@ -32,7 +35,7 @@ export const eventService = {
 
     let query = supabase
       .from('events')
-      .select('*', { count: 'exact' })
+      .select('*, event_registrations(count)', { count: 'exact' })
       .order('event_date', { ascending: false });
 
     if (params?.status) {

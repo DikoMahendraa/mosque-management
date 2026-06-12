@@ -116,11 +116,22 @@ export interface MosqueEvent {
   location: string;
   poster: string;
   status: 'upcoming' | 'finished';
+  registration_count?: number;
   created_at: string;
   updated_at: string;
 }
 
-export type EventFormData = Omit<MosqueEvent, 'id' | 'created_at' | 'updated_at'>;
+export type EventFormData = Omit<MosqueEvent, 'id' | 'created_at' | 'updated_at' | 'registration_count'>;
+
+export interface EventRegistration {
+  id: string;
+  event_id: string;
+  name: string;
+  address: string;
+  age: number;
+  phone: string | null;
+  created_at: string;
+}
 
 // ============================================================
 // TAHSIN TYPES
