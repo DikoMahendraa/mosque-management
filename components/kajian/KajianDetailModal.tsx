@@ -4,8 +4,8 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Badge, { statusBadge } from '@/components/ui/Badge';
 import { Kajian } from '@/types';
-import { formatDate } from '@/lib/utils';
-import { BookOpen, CalendarDays, Clock, MapPin, User, Users, ExternalLink, Pencil } from 'lucide-react';
+import { formatDate, formatCurrency } from '@/lib/utils';
+import { BookOpen, CalendarDays, Clock, MapPin, User, Users, ExternalLink, Pencil, Heart } from 'lucide-react';
 
 const LANDING_PAGE_BASE = 'https://masjiddarussalaml.vercel.app//kajian';
 
@@ -99,6 +99,21 @@ export default function KajianDetailModal({
           </div>
         ) : (
           <p className="text-sm italic text-gray-400">Belum ada deskripsi.</p>
+        )}
+
+        {kajian.donation_campaign && (
+          <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-rose-800">
+              <Heart className="h-4 w-4" />
+              Donasi Aktif
+            </div>
+            <p className="text-sm text-gray-700">
+              Target: <span className="font-semibold text-emerald-700">{formatCurrency(kajian.donation_campaign.target_amount)}</span>
+            </p>
+            <p className="text-xs text-gray-500">
+              Periode: {formatDate(kajian.donation_campaign.start_date)} — {formatDate(kajian.donation_campaign.end_date)}
+            </p>
+          </div>
         )}
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-gray-100 pt-4">

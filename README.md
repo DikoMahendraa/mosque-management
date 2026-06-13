@@ -152,7 +152,10 @@ Execute the SQL files in the `supabase/` folder in your Supabase SQL Editor:
 - `app_settings.sql`
 - `broadcasts.sql`
 - `events.sql`
+- `events_archive.sql`
 - `finance_transactions.sql`
+- `donation_campaigns.sql`
+- `kajian_archive.sql`
 - `jamaah.sql`
 - `mosque_admins.sql`
 - `ustad.sql`

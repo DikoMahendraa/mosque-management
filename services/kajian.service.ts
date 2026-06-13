@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { Kajian, KajianFormData, ApiResponse } from '@/types';
+import { kajianDonationService } from '@/services/kajian-donation.service';
 
 function mapKajian(row: Record<string, unknown>): Kajian {
   const time = typeof row.time === 'string' ? row.time.slice(0, 5) : String(row.time ?? '');
@@ -17,6 +18,7 @@ function mapKajian(row: Record<string, unknown>): Kajian {
     location: String(row.location ?? ''),
     poster_image: String(row.poster_image ?? ''),
     status: row.status as Kajian['status'],
+    is_archived: Boolean(row.is_archived),
     registration_count,
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
@@ -29,16 +31,19 @@ export const kajianService = {
     limit?: number;
     search?: string;
     status?: string;
+    archived?: boolean;
   }): Promise<ApiResponse<Kajian[]>> {
     const supabase = createClient();
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 10;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
+    const archived = params?.archived ?? false;
 
     let query = supabase
       .from('kajian')
       .select('*, kajian_registrations(count)', { count: 'exact' })
+      .eq('is_archived', archived)
       .order('date', { ascending: false });
 
     if (params?.status) {
@@ -54,8 +59,14 @@ export const kajianService = {
     if (error) throw new Error(error.message);
 
     const total = count ?? 0;
+    const kajianList = (data ?? []).map((row: Record<string, unknown>) => mapKajian(row));
+    const campaignMap = await kajianDonationService.getByKajianIds(kajianList.map((k) => k.id));
+
     return {
-      data: (data ?? []).map((row: Record<string, unknown>) => mapKajian(row)),
+      data: kajianList.map((kajian) => ({
+        ...kajian,
+        donation_campaign: campaignMap.get(kajian.id) ?? null,
+      })),
       meta: {
         page,
         limit,
@@ -112,5 +123,31 @@ export const kajianService = {
     const { error } = await supabase.from('kajian').delete().eq('id', id);
     if (error) throw new Error(error.message);
     return { data: null, message: 'Kajian berhasil dihapus' };
+  },
+
+  async archive(id: string): Promise<ApiResponse<Kajian>> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('kajian')
+      .update({ is_archived: true })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { data: mapKajian(data), message: 'Kajian berhasil diarsipkan' };
+  },
+
+  async restore(id: string): Promise<ApiResponse<Kajian>> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('kajian')
+      .update({ is_archived: false })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { data: mapKajian(data), message: 'Kajian berhasil dipulihkan' };
   },
 };

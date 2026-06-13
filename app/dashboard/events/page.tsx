@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, CalendarDays, Send, QrCode, Users, Eye } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, CalendarDays, Archive, Users } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -16,7 +17,7 @@ import RichTextEditor from '@/components/ui/RichTextEditor';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import QRCodeModal from '@/components/ui/QRCodeModal';
-import { useEventList, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/hooks/useEvents';
+import { useEventList, useCreateEvent, useUpdateEvent, useArchiveEvent } from '@/hooks/useEvents';
 import { useWhatsAppSettings } from '@/hooks/useSettings';
 import { MosqueEvent, EventFormData } from '@/types';
 import { formatDate } from '@/lib/utils';
@@ -25,6 +26,7 @@ import { useForm, Controller } from 'react-hook-form';
 import BroadcastModal from '@/components/broadcast/BroadcastModal';
 import EventRegistrationsModal from '@/components/events/EventRegistrationsModal';
 import EventDetailModal from '@/components/events/EventDetailModal';
+import EventRowActions from '@/components/events/EventRowActions';
 
 const defaultValues: EventFormData = {
   title: '',
@@ -41,7 +43,7 @@ export default function EventsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<MosqueEvent | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [archiveId, setArchiveId] = useState<string | null>(null);
   const [broadcastItem, setBroadcastItem] = useState<MosqueEvent | null>(null);
   const [qrCodeItem, setQrCodeItem] = useState<MosqueEvent | null>(null);
   const [registrationsItem, setRegistrationsItem] = useState<MosqueEvent | null>(null);
@@ -51,7 +53,7 @@ export default function EventsPage() {
   const { data: whatsappSettings } = useWhatsAppSettings();
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
-  const deleteMutation = useDeleteEvent();
+  const archiveMutation = useArchiveEvent();
 
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<EventFormData>({ defaultValues });
 
@@ -75,12 +77,12 @@ export default function EventsPage() {
     } catch { toast('error', 'Gagal', 'Terjadi kesalahan'); }
   };
 
-  const onDelete = async () => {
-    if (!deleteId) return;
+  const onArchive = async () => {
+    if (!archiveId) return;
     try {
-      await deleteMutation.mutateAsync(deleteId);
-      toast('success', 'Berhasil', 'Event berhasil dihapus');
-      setDeleteId(null);
+      await archiveMutation.mutateAsync(archiveId);
+      toast('success', 'Berhasil', 'Event dipindahkan ke arsip');
+      setArchiveId(null);
     } catch { toast('error', 'Gagal', 'Terjadi kesalahan'); }
   };
 
@@ -98,7 +100,16 @@ export default function EventsPage() {
     <DashboardLayout
       title="Events"
       description="Kelola kegiatan dan acara masjid"
-      actions={<Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>Tambah Event</Button>}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/dashboard/events/archive">
+            <Button variant="outline" leftIcon={<Archive className="h-4 w-4" />}>
+              Arsip
+            </Button>
+          </Link>
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>Tambah Event</Button>
+        </div>
+      }
     >
       <Card padding="md">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -154,40 +165,18 @@ export default function EventsPage() {
                           </button>
                         </td>
                         <td className="px-4 py-3"><Badge variant={statusBadge(item.status)}>{item.status === 'upcoming' ? 'Mendatang' : 'Selesai'}</Badge></td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDetailItem(item)}
-                              className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-                              title="Lihat detail"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleShowQR(item)}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              title="Generate QR Code"
-                            >
-                              <QrCode className="h-4 w-4" />
-                            </Button>
-                            {whatsappSettings?.enabled && item.status === 'upcoming' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleBroadcast(item)}
-                                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                title="Broadcast ke Jamaah"
-                              >
-                                <Send className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="sm" onClick={() => setDeleteId(item.id)} className="text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
-                          </div>
+                        <td className="px-4 py-3 text-right">
+                          <EventRowActions
+                            event={item}
+                            mode="active"
+                            whatsappEnabled={whatsappSettings?.enabled}
+                            onViewDetail={setDetailItem}
+                            onViewRegistrations={setRegistrationsItem}
+                            onShowQR={handleShowQR}
+                            onBroadcast={handleBroadcast}
+                            onEdit={openEdit}
+                            onArchive={(e) => setArchiveId(e.id)}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -215,7 +204,16 @@ export default function EventsPage() {
           </div>
         </form>
       </Modal>
-      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} isLoading={deleteMutation.isPending} />
+
+      <ConfirmDialog
+        isOpen={!!archiveId}
+        onClose={() => setArchiveId(null)}
+        onConfirm={onArchive}
+        isLoading={archiveMutation.isPending}
+        title="Arsipkan Event"
+        message="Event akan dipindahkan ke arsip dan tidak tampil di daftar aktif. Anda bisa memulihkannya kapan saja."
+        confirmLabel="Arsipkan"
+      />
 
       <BroadcastModal
         isOpen={!!broadcastItem}

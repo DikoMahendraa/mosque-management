@@ -14,6 +14,7 @@ function mapEvent(row: Record<string, unknown>): MosqueEvent {
     location: String(row.location ?? ''),
     poster: String(row.poster ?? ''),
     status: row.status as MosqueEvent['status'],
+    is_archived: Boolean(row.is_archived),
     registration_count,
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
@@ -26,16 +27,19 @@ export const eventService = {
     limit?: number;
     search?: string;
     status?: string;
+    archived?: boolean;
   }): Promise<ApiResponse<MosqueEvent[]>> {
     const supabase = createClient();
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 10;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
+    const archived = params?.archived ?? false;
 
     let query = supabase
       .from('events')
       .select('*, event_registrations(count)', { count: 'exact' })
+      .eq('is_archived', archived)
       .order('event_date', { ascending: false });
 
     if (params?.status) {
@@ -109,5 +113,31 @@ export const eventService = {
     const { error } = await supabase.from('events').delete().eq('id', id);
     if (error) throw new Error(error.message);
     return { data: null, message: 'Event berhasil dihapus' };
+  },
+
+  async archive(id: string): Promise<ApiResponse<MosqueEvent>> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('events')
+      .update({ is_archived: true })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { data: mapEvent(data), message: 'Event berhasil diarsipkan' };
+  },
+
+  async restore(id: string): Promise<ApiResponse<MosqueEvent>> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('events')
+      .update({ is_archived: false })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { data: mapEvent(data), message: 'Event berhasil dipulihkan' };
   },
 };

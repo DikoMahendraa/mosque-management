@@ -98,12 +98,34 @@ export interface Kajian {
   location: string;
   poster_image: string;
   status: 'upcoming' | 'finished';
+  is_archived?: boolean;
   registration_count?: number;
+  donation_campaign?: KajianDonationCampaign | null;
   created_at: string;
   updated_at: string;
 }
 
-export type KajianFormData = Omit<Kajian, 'id' | 'created_at' | 'updated_at' | 'registration_count'>;
+export interface KajianDonationCampaign {
+  id: string;
+  kajian_id: string;
+  target_amount: number;
+  collected_amount: number;
+  start_date: string;
+  end_date: string;
+  status: 'active' | 'completed' | 'closed';
+}
+
+export interface KajianDonationInput {
+  enabled: boolean;
+  target_amount: number;
+  start_date: string;
+  end_date: string;
+}
+
+export type KajianFormData = Omit<
+  Kajian,
+  'id' | 'created_at' | 'updated_at' | 'registration_count' | 'donation_campaign' | 'is_archived'
+>;
 
 export interface KajianRegistration {
   id: string;
@@ -127,12 +149,16 @@ export interface MosqueEvent {
   location: string;
   poster: string;
   status: 'upcoming' | 'finished';
+  is_archived?: boolean;
   registration_count?: number;
   created_at: string;
   updated_at: string;
 }
 
-export type EventFormData = Omit<MosqueEvent, 'id' | 'created_at' | 'updated_at' | 'registration_count'>;
+export type EventFormData = Omit<
+  MosqueEvent,
+  'id' | 'created_at' | 'updated_at' | 'registration_count' | 'is_archived'
+>;
 
 export interface EventRegistration {
   id: string;
