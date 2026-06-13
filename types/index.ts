@@ -371,11 +371,20 @@ export type UstadFormData = Omit<Ustad, 'id' | 'created_at' | 'updated_at'>;
 // JAMAAH TYPES
 // ============================================================
 
+export type JamaahStatus = 'jamaah_tetap' | 'musafir' | 'donatur';
+
+export const JAMAAH_STATUS_LABELS: Record<JamaahStatus, string> = {
+  jamaah_tetap: 'Jamaah Tetap',
+  musafir: 'Musafir',
+  donatur: 'Donatur',
+};
+
 export interface Jamaah {
   id: string;
   nama: string;
   nomor_whatsapp: string;
   alamat: string;
+  status: JamaahStatus;
   created_at: string;
   updated_at: string;
 }
