@@ -9,6 +9,7 @@ import {
   Trash2,
   Users,
   ArchiveRestore,
+  Sparkles,
 } from 'lucide-react';
 import ActionMenu, { ActionMenuItem } from '@/components/ui/ActionMenu';
 import { MosqueEvent } from '@/types';
@@ -21,6 +22,7 @@ interface EventRowActionsProps {
   onViewRegistrations: (event: MosqueEvent) => void;
   onShowQR?: (event: MosqueEvent) => void;
   onBroadcast?: (event: MosqueEvent) => void;
+  onGeneratePoster?: (event: MosqueEvent) => void;
   onEdit?: (event: MosqueEvent) => void;
   onArchive?: (event: MosqueEvent) => void;
   onRestore?: (event: MosqueEvent) => void;
@@ -35,6 +37,7 @@ export default function EventRowActions({
   onViewRegistrations,
   onShowQR,
   onBroadcast,
+  onGeneratePoster,
   onEdit,
   onArchive,
   onRestore,
@@ -51,6 +54,12 @@ export default function EventRowActions({
             icon: <Send className="h-4 w-4" />,
             onClick: () => onBroadcast?.(event),
             hidden: !whatsappEnabled || event.status !== 'upcoming' || !onBroadcast,
+          },
+          {
+            label: 'Buat Poster',
+            icon: <Sparkles className="h-4 w-4" />,
+            onClick: () => onGeneratePoster?.(event),
+            hidden: !onGeneratePoster,
           },
           { label: 'Edit', icon: <Pencil className="h-4 w-4" />, onClick: () => onEdit?.(event), hidden: !onEdit },
           {
