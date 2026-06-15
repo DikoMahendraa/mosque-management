@@ -4,6 +4,8 @@ CREATE TABLE public.jamaah (
   nama text NOT NULL,
   nomor_whatsapp text NOT NULL,
   alamat text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'jamaah_tetap'
+    CHECK (status IN ('jamaah_tetap', 'musafir', 'donatur')),
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),

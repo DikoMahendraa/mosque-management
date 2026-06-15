@@ -8,6 +8,7 @@ export function useJamaahList(params?: {
   page?: number;
   limit?: number;
   search?: string;
+  status?: string;
 }) {
   return useQuery({
     queryKey: [JAMAAH_KEY, params],

@@ -42,6 +42,9 @@ export function statusBadge(status: string) {
     completed: 'purple',
     income: 'success',
     expense: 'error',
+    jamaah_tetap: 'success',
+    musafir: 'info',
+    donatur: 'purple',
   };
   return map[status] ?? 'default';
 }

@@ -4,7 +4,13 @@ import { EventFormData } from '@/types';
 
 export const EVENTS_KEY = 'events';
 
-export function useEventList(params?: { page?: number; limit?: number; search?: string; status?: string }) {
+export function useEventList(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  archived?: boolean;
+}) {
   return useQuery({
     queryKey: [EVENTS_KEY, params],
     queryFn: () => eventService.getAll(params),
@@ -40,6 +46,22 @@ export function useDeleteEvent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => eventService.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [EVENTS_KEY] }),
+  });
+}
+
+export function useArchiveEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => eventService.archive(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [EVENTS_KEY] }),
+  });
+}
+
+export function useRestoreEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => eventService.restore(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [EVENTS_KEY] }),
   });
 }

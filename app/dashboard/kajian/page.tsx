@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, BookOpen, Send, QrCode, Users, Eye } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, BookOpen, Heart, Archive, Users } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -17,16 +18,24 @@ import RichTextEditor from '@/components/ui/RichTextEditor';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import QRCodeModal from '@/components/ui/QRCodeModal';
-import { useKajianList, useCreateKajian, useUpdateKajian, useDeleteKajian } from '@/hooks/useKajian';
+import { useKajianList, useCreateKajian, useUpdateKajian, useArchiveKajian, KAJIAN_KEY } from '@/hooks/useKajian';
 import { useUstadList } from '@/hooks/useUstad';
 import { useWhatsAppSettings } from '@/hooks/useSettings';
-import { Kajian, KajianFormData } from '@/types';
-import { formatDate } from '@/lib/utils';
+import { Kajian, KajianFormData, KajianDonationInput } from '@/types';
+import { formatDate, formatCurrency } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { useForm, Controller } from 'react-hook-form';
+import { useQueryClient } from '@tanstack/react-query';
 import BroadcastModal from '@/components/broadcast/BroadcastModal';
 import KajianRegistrationsModal from '@/components/kajian/KajianRegistrationsModal';
 import KajianDetailModal from '@/components/kajian/KajianDetailModal';
+import KajianRowActions from '@/components/kajian/KajianRowActions';
+import KajianDonationFields, {
+  defaultKajianDonationInput,
+  donationInputFromCampaign,
+  validateKajianDonationInput,
+} from '@/components/kajian/KajianDonationFields';
+import { kajianDonationService } from '@/services/kajian-donation.service';
 
 const defaultValues: KajianFormData = {
   title: '',
@@ -45,18 +54,21 @@ export default function KajianPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<Kajian | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [archiveId, setArchiveId] = useState<string | null>(null);
   const [broadcastItem, setBroadcastItem] = useState<Kajian | null>(null);
   const [qrCodeItem, setQrCodeItem] = useState<Kajian | null>(null);
   const [registrationsItem, setRegistrationsItem] = useState<Kajian | null>(null);
   const [detailItem, setDetailItem] = useState<Kajian | null>(null);
+  const [donationInput, setDonationInput] = useState<KajianDonationInput>(defaultKajianDonationInput);
+  const [donationErrors, setDonationErrors] = useState<Partial<Record<keyof KajianDonationInput, string>>>({});
 
   const { data, isLoading } = useKajianList({ page, limit: 8, search, status: statusFilter });
   const { data: ustadData } = useUstadList({ limit: 100 });
   const { data: whatsappSettings } = useWhatsAppSettings();
   const createMutation = useCreateKajian();
   const updateMutation = useUpdateKajian();
-  const deleteMutation = useDeleteKajian();
+  const archiveMutation = useArchiveKajian();
+  const queryClient = useQueryClient();
 
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<KajianFormData>({
     defaultValues,
@@ -72,6 +84,8 @@ export default function KajianPage() {
   const openCreate = () => {
     setEditItem(null);
     reset(defaultValues);
+    setDonationInput(defaultKajianDonationInput);
+    setDonationErrors({});
     setIsModalOpen(true);
   };
 
@@ -87,31 +101,53 @@ export default function KajianPage() {
       poster_image: item.poster_image,
       status: item.status,
     });
+    setDonationInput(donationInputFromCampaign(item.donation_campaign));
+    setDonationErrors({});
     setIsModalOpen(true);
   };
 
   const onSubmit = async (data: KajianFormData) => {
+    const validationErrors = validateKajianDonationInput(donationInput);
+    if (Object.keys(validationErrors).length > 0) {
+      setDonationErrors(validationErrors);
+      toast('error', 'Validasi gagal', 'Periksa field donasi');
+      return;
+    }
+
     try {
       if (editItem) {
         await updateMutation.mutateAsync({ id: editItem.id, data });
+        await kajianDonationService.upsertForKajian(
+          editItem.id,
+          { title: data.title, description: data.description },
+          donationInput
+        );
         toast('success', 'Berhasil', 'Kajian berhasil diupdate');
       } else {
-        await createMutation.mutateAsync(data);
+        const result = await createMutation.mutateAsync(data);
+        await kajianDonationService.upsertForKajian(
+          result.data.id,
+          { title: data.title, description: data.description },
+          donationInput
+        );
         toast('success', 'Berhasil', 'Kajian berhasil ditambahkan');
       }
+      await queryClient.invalidateQueries({ queryKey: [KAJIAN_KEY] });
       setIsModalOpen(false);
       reset(defaultValues);
+      setDonationInput(defaultKajianDonationInput);
+      setDonationErrors({});
     } catch {
       toast('error', 'Gagal', 'Terjadi kesalahan');
     }
   };
 
-  const onDelete = async () => {
-    if (!deleteId) return;
+  const onArchive = async () => {
+    if (!archiveId) return;
     try {
-      await deleteMutation.mutateAsync(deleteId);
-      toast('success', 'Berhasil', 'Kajian berhasil dihapus');
-      setDeleteId(null);
+      await archiveMutation.mutateAsync(archiveId);
+      toast('success', 'Berhasil', 'Kajian dipindahkan ke arsip');
+      setArchiveId(null);
     } catch {
       toast('error', 'Gagal', 'Terjadi kesalahan');
     }
@@ -132,9 +168,16 @@ export default function KajianPage() {
       title="Kajian"
       description="Kelola jadwal dan informasi kajian"
       actions={
-        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>
-          Tambah Kajian
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/dashboard/kajian/archive">
+            <Button variant="outline" leftIcon={<Archive className="h-4 w-4" />}>
+              Arsip
+            </Button>
+          </Link>
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>
+            Tambah Kajian
+          </Button>
+        </div>
       }
     >
       <Card padding="md">
@@ -172,6 +215,7 @@ export default function KajianPage() {
                     <th className="px-4 py-3">Tanggal</th>
                     <th className="px-4 py-3">Lokasi</th>
                     <th className="px-4 py-3">Pendaftar</th>
+                    <th className="px-4 py-3">Donasi</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 text-right">Aksi</th>
                   </tr>
@@ -208,48 +252,32 @@ export default function KajianPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3">
+                        {item.donation_campaign ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-rose-700">
+                            <Heart className="h-3.5 w-3.5" />
+                            {formatCurrency(item.donation_campaign.target_amount)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
                         <Badge variant={statusBadge(item.status)}>
                           {item.status === 'upcoming' ? 'Mendatang' : 'Selesai'}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDetailItem(item)}
-                            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-                            title="Lihat detail"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleShowQR(item)}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            title="Generate QR Code"
-                          >
-                            <QrCode className="h-4 w-4" />
-                          </Button>
-                          {whatsappSettings?.enabled && item.status === 'upcoming' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleBroadcast(item)}
-                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                              title="Broadcast ke Jamaah"
-                            >
-                              <Send className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteId(item.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <td className="px-4 py-3 text-right">
+                        <KajianRowActions
+                          kajian={item}
+                          mode="active"
+                          whatsappEnabled={whatsappSettings?.enabled}
+                          onViewDetail={setDetailItem}
+                          onViewRegistrations={setRegistrationsItem}
+                          onShowQR={handleShowQR}
+                          onBroadcast={handleBroadcast}
+                          onEdit={openEdit}
+                          onArchive={(k) => setArchiveId(k.id)}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -306,6 +334,11 @@ export default function KajianPage() {
               <RichTextEditor label="Deskripsi" value={field.value} onChange={field.onChange} />
             )}
           />
+          <KajianDonationFields
+            value={donationInput}
+            onChange={setDonationInput}
+            errors={donationErrors}
+          />
           <Select
             label="Status"
             options={[
@@ -321,7 +354,15 @@ export default function KajianPage() {
         </form>
       </Modal>
 
-      <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} isLoading={deleteMutation.isPending} />
+      <ConfirmDialog
+        isOpen={!!archiveId}
+        onClose={() => setArchiveId(null)}
+        onConfirm={onArchive}
+        isLoading={archiveMutation.isPending}
+        title="Arsipkan Kajian"
+        message="Kajian akan dipindahkan ke arsip dan tidak tampil di daftar aktif. Anda bisa memulihkannya kapan saja."
+        confirmLabel="Arsipkan"
+      />
 
       <BroadcastModal
         isOpen={!!broadcastItem}

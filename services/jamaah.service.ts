@@ -7,6 +7,7 @@ function mapJamaah(row: Record<string, unknown>): Jamaah {
     nama: String(row.nama ?? ''),
     nomor_whatsapp: String(row.nomor_whatsapp ?? ''),
     alamat: String(row.alamat ?? ''),
+    status: (row.status as Jamaah['status']) ?? 'jamaah_tetap',
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
   };
@@ -17,6 +18,7 @@ export const jamaahService = {
     page?: number;
     limit?: number;
     search?: string;
+    status?: string;
   }): Promise<ApiResponse<Jamaah[]>> {
     const supabase = createClient();
     const page = params?.page ?? 1;
@@ -32,6 +34,10 @@ export const jamaahService = {
     if (params?.search) {
       const q = `%${params.search.trim()}%`;
       query = query.or(`nama.ilike.${q},nomor_whatsapp.ilike.${q},alamat.ilike.${q}`);
+    }
+
+    if (params?.status) {
+      query = query.eq('status', params.status);
     }
 
     const { data, error, count } = await query.range(from, to);

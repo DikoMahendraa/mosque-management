@@ -9,6 +9,7 @@ export function useKajianList(params?: {
   limit?: number;
   search?: string;
   status?: string;
+  archived?: boolean;
 }) {
   return useQuery({
     queryKey: [KAJIAN_KEY, params],
@@ -45,6 +46,22 @@ export function useDeleteKajian() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => kajianService.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KAJIAN_KEY] }),
+  });
+}
+
+export function useArchiveKajian() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => kajianService.archive(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KAJIAN_KEY] }),
+  });
+}
+
+export function useRestoreKajian() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => kajianService.restore(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KAJIAN_KEY] }),
   });
 }
