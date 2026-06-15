@@ -5,6 +5,22 @@ All notable changes to Dashboard Darussalam are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-16
+
+### Added
+
+- Event and kajian archiving with dedicated archive pages (restore or permanently delete)
+- Finance report sharing via WhatsApp with transaction selection and date-range filtering
+- Jamaah status field with filter dropdown and status badges in the list
+- Reusable row action menus for events and kajian
+- Supabase SQL migrations for event/kajian archives and jamaah status
+
+### Changed
+
+- Events and kajian list pages refactored to use shared action menu components
+- Finance page UI updated with multi-select transactions and share workflow
+- Jamaah page supports status-based filtering alongside existing search
+
 ## [1.0.0] - 2026-06-12
 
 ### Added
@@ -25,4 +41,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First stable release marking production-ready v1
 
+[1.1.0]: https://github.com/your-org/dashboard-darussalam/releases/tag/v1.1.0
 [1.0.0]: https://github.com/your-org/dashboard-darussalam/releases/tag/v1.0.0
