@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsService } from '@/services/settings.service';
-import { WhatsAppSettings } from '@/types';
+import { WhatsAppSettings, AISettings } from '@/types';
 
 export const SETTINGS_KEY = 'settings';
 
@@ -36,5 +36,24 @@ export function useUpdateSetting() {
     mutationFn: ({ key, value }: { key: string; value: string }) =>
       settingsService.updateSetting(key, value),
     onSuccess: () => qc.invalidateQueries({ queryKey: [SETTINGS_KEY] }),
+  });
+}
+
+export function useAISettings() {
+  return useQuery({
+    queryKey: [SETTINGS_KEY, 'ai'],
+    queryFn: () => settingsService.getAISettings(),
+  });
+}
+
+export function useUpdateAISettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (settings: Partial<AISettings>) =>
+      settingsService.updateAISettings(settings),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [SETTINGS_KEY] });
+      qc.invalidateQueries({ queryKey: [SETTINGS_KEY, 'ai'] });
+    },
   });
 }

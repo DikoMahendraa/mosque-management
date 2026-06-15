@@ -413,6 +413,28 @@ export interface WhatsAppSettings {
   device: string;
 }
 
+export type AIProvider = 'template' | 'gemini' | 'openai';
+
+export interface AISettings {
+  enabled: boolean;
+  default_provider: AIProvider;
+  gemini_api_key: string;
+  openai_api_key: string;
+  mosque_name: string;
+}
+
+export type EventPosterTemplate = 'emerald' | 'gold' | 'night';
+
+export interface EventPosterInput {
+  title: string;
+  eventDate: string;
+  location: string;
+  description?: string;
+  mosqueName?: string;
+  template?: EventPosterTemplate;
+  landingUrl?: string;
+}
+
 // ============================================================
 // BROADCAST TYPES
 // ============================================================

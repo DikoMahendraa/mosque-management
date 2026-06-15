@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import Badge, { statusBadge } from '@/components/ui/Badge';
 import { MosqueEvent } from '@/types';
 import { formatDate } from '@/lib/utils';
-import { CalendarDays, MapPin, Users, ExternalLink, Pencil } from 'lucide-react';
+import { CalendarDays, MapPin, Users, ExternalLink, Pencil, Sparkles } from 'lucide-react';
 
 const LANDING_PAGE_BASE = 'https://masjiddarussalaml.vercel.app/events';
 
@@ -15,6 +15,7 @@ interface EventDetailModalProps {
   event: MosqueEvent | null;
   onEdit?: (event: MosqueEvent) => void;
   onViewRegistrations?: (event: MosqueEvent) => void;
+  onGeneratePoster?: (event: MosqueEvent) => void;
 }
 
 export default function EventDetailModal({
@@ -23,6 +24,7 @@ export default function EventDetailModal({
   event,
   onEdit,
   onViewRegistrations,
+  onGeneratePoster,
 }: EventDetailModalProps) {
   if (!event) return null;
 
@@ -110,6 +112,19 @@ export default function EventDetailModal({
               }}
             >
               Lihat Pendaftar
+            </Button>
+          )}
+          {onGeneratePoster && (
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Sparkles className="h-4 w-4" />}
+              onClick={() => {
+                onClose();
+                onGeneratePoster(event);
+              }}
+            >
+              Buat Poster
             </Button>
           )}
           {onEdit && (

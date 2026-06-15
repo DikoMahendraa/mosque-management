@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, User, Bell, Shield, Palette, MessageSquare } from 'lucide-react';
+import { Save, User, Bell, Shield, Palette, MessageSquare, Sparkles } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -9,9 +9,10 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store';
-import { useWhatsAppSettings, useUpdateWhatsAppSettings } from '@/hooks/useSettings';
+import { useWhatsAppSettings, useUpdateWhatsAppSettings, useAISettings, useUpdateAISettings } from '@/hooks/useSettings';
+import { AIProvider } from '@/types';
 
-type Tab = 'profile' | 'notifications' | 'security' | 'appearance' | 'whatsapp';
+type Tab = 'profile' | 'notifications' | 'security' | 'appearance' | 'whatsapp' | 'ai';
 type WhatsAppProvider = 'fonnte' | 'wablas' | 'twilio';
 
 interface WhatsAppFormState {
@@ -21,9 +22,18 @@ interface WhatsAppFormState {
   device: string;
 }
 
+interface AIFormState {
+  enabled: boolean;
+  default_provider: AIProvider;
+  gemini_api_key: string;
+  openai_api_key: string;
+  mosque_name: string;
+}
+
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'profile', label: 'Profil', icon: User },
   { key: 'whatsapp', label: 'WhatsApp API', icon: MessageSquare },
+  { key: 'ai', label: 'Integrasi AI', icon: Sparkles },
   { key: 'notifications', label: 'Notifikasi', icon: Bell },
   { key: 'security', label: 'Keamanan', icon: Shield },
   { key: 'appearance', label: 'Tampilan', icon: Palette },
@@ -41,7 +51,11 @@ export default function SettingsPage() {
   const { data: whatsappSettings, isLoading: isLoadingWhatsApp } = useWhatsAppSettings();
   const updateWhatsAppMutation = useUpdateWhatsAppSettings();
 
+  const { data: aiSettings, isLoading: isLoadingAI } = useAISettings();
+  const updateAIMutation = useUpdateAISettings();
+
   const [waDraft, setWaDraft] = useState<WhatsAppFormState | null>(null);
+  const [aiDraft, setAiDraft] = useState<AIFormState | null>(null);
 
   const waForm: WhatsAppFormState = waDraft ?? {
     enabled: whatsappSettings?.enabled ?? false,
@@ -52,6 +66,18 @@ export default function SettingsPage() {
 
   const updateWaForm = (patch: Partial<WhatsAppFormState>) => {
     setWaDraft({ ...waForm, ...patch });
+  };
+
+  const aiForm: AIFormState = aiDraft ?? {
+    enabled: aiSettings?.enabled ?? false,
+    default_provider: aiSettings?.default_provider ?? 'template',
+    gemini_api_key: aiSettings?.gemini_api_key ?? '',
+    openai_api_key: aiSettings?.openai_api_key ?? '',
+    mosque_name: aiSettings?.mosque_name ?? 'Masjid Darussalam',
+  };
+
+  const updateAiForm = (patch: Partial<AIFormState>) => {
+    setAiDraft({ ...aiForm, ...patch });
   };
 
   const handleSaveProfile = async () => {
@@ -71,6 +97,22 @@ export default function SettingsPage() {
       });
       setWaDraft(null);
       toast('success', 'Berhasil', 'Pengaturan WhatsApp API berhasil disimpan');
+    } catch {
+      toast('error', 'Gagal', 'Terjadi kesalahan saat menyimpan');
+    }
+  };
+
+  const handleSaveAI = async () => {
+    try {
+      await updateAIMutation.mutateAsync({
+        enabled: aiForm.enabled,
+        default_provider: aiForm.default_provider,
+        gemini_api_key: aiForm.gemini_api_key,
+        openai_api_key: aiForm.openai_api_key,
+        mosque_name: aiForm.mosque_name,
+      });
+      setAiDraft(null);
+      toast('success', 'Berhasil', 'Pengaturan Integrasi AI berhasil disimpan');
     } catch {
       toast('error', 'Gagal', 'Terjadi kesalahan saat menyimpan');
     }
@@ -224,6 +266,109 @@ export default function SettingsPage() {
                       leftIcon={<Save className="h-4 w-4" />}
                     >
                       Simpan Pengaturan
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {activeTab === 'ai' && (
+            <Card padding="md">
+              <h3 className="mb-4 text-base font-semibold text-gray-900">Integrasi AI</h3>
+              <p className="mb-6 text-sm text-gray-600">
+                Simpan token API AI di satu tempat. Fitur poster event saat ini memakai template gratis;
+                token Gemini atau OpenAI akan dipakai otomatis saat fitur AI image dirilis.
+              </p>
+
+              {isLoadingAI ? (
+                <div className="text-center py-8 text-gray-500">Memuat pengaturan...</div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-gray-100 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">Aktifkan Integrasi AI</p>
+                        <p className="text-xs text-gray-500">
+                          Dashboard akan menggunakan provider default yang dipilih
+                        </p>
+                      </div>
+                      <label className="relative inline-flex cursor-pointer items-center">
+                        <input
+                          type="checkbox"
+                          checked={aiForm.enabled}
+                          onChange={(e) => updateAiForm({ enabled: e.target.checked })}
+                          className="peer sr-only"
+                        />
+                        <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full" />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                    <p className="text-sm text-emerald-800 font-medium mb-2">✨ Cara setup token gratis / trial:</p>
+                    <ul className="text-xs text-emerald-700 space-y-1 ml-4 list-disc">
+                      <li><strong>Gemini:</strong> buat API key di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="underline">Google AI Studio</a> (free tier tersedia)</li>
+                      <li><strong>OpenAI:</strong> buat API key di <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">platform.openai.com</a></li>
+                      <li>Simpan token di bawah — cukup sekali, dipakai semua fitur AI dashboard</li>
+                    </ul>
+                  </div>
+
+                  <Select
+                    label="Provider Default"
+                    value={aiForm.default_provider}
+                    onChange={(e) => updateAiForm({ default_provider: e.target.value as AIProvider })}
+                    options={[
+                      { value: 'template', label: 'Template Gratis (tanpa API)' },
+                      { value: 'gemini', label: 'Google Gemini' },
+                      { value: 'openai', label: 'OpenAI (ChatGPT / DALL-E)' },
+                    ]}
+                  />
+
+                  <Input
+                    label="Nama Masjid (untuk poster)"
+                    value={aiForm.mosque_name}
+                    onChange={(e) => updateAiForm({ mosque_name: e.target.value })}
+                    placeholder="Masjid Darussalam"
+                  />
+
+                  <Input
+                    label="Gemini API Key"
+                    type="password"
+                    value={aiForm.gemini_api_key}
+                    onChange={(e) => updateAiForm({ gemini_api_key: e.target.value })}
+                    placeholder="AIza..."
+                    hint="Dari Google AI Studio — free tier untuk testing"
+                  />
+
+                  <Input
+                    label="OpenAI API Key"
+                    type="password"
+                    value={aiForm.openai_api_key}
+                    onChange={(e) => updateAiForm({ openai_api_key: e.target.value })}
+                    placeholder="sk-..."
+                    hint="Dari OpenAI Platform"
+                  />
+
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-2">
+                    <p className="text-xs text-blue-800">
+                      <strong>Status:</strong>{' '}
+                      {aiForm.gemini_api_key.trim() ? '✅ Gemini key tersimpan' : '⬜ Gemini belum diisi'}
+                      {' · '}
+                      {aiForm.openai_api_key.trim() ? '✅ OpenAI key tersimpan' : '⬜ OpenAI belum diisi'}
+                    </p>
+                    <p className="text-xs text-blue-700">
+                      Poster event sudah bisa dibuat dengan <strong>template gratis</strong> atau <strong>AI background</strong> di form Tambah/Edit Event setelah API key disimpan.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      onClick={handleSaveAI}
+                      isLoading={updateAIMutation.isPending}
+                      leftIcon={<Save className="h-4 w-4" />}
+                    >
+                      Simpan Pengaturan AI
                     </Button>
                   </div>
                 </div>
