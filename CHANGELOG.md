@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kajian donation campaigns (target amount, date range, enable/disable per kajian)
 - Reusable row action menus for events and kajian (archive, QR, poster, broadcast, etc.)
 - Supabase SQL migrations for archives, jamaah status, donation campaigns, AI settings, and event poster storage
+- Finance report sharing via WhatsApp with transaction selection and date-range filtering
+- Jamaah status field with filter dropdown and status badges in the list
+- Reusable row action menus for events and kajian
+- Supabase SQL migrations for event/kajian archives and jamaah status
 
 ### Changed
 
@@ -47,4 +51,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - First stable release marking production-ready v1
 
 [1.3.0]: https://github.com/your-org/dashboard-darussalam/releases/tag/v1.3.0
+[1.1.0]: https://github.com/your-org/dashboard-darussalam/releases/tag/v1.1.0
 [1.0.0]: https://github.com/your-org/dashboard-darussalam/releases/tag/v1.0.0
