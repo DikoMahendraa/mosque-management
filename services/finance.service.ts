@@ -47,6 +47,7 @@ export const financeService = {
     limit?: number;
     search?: string;
     type?: string;
+    category?: string;
     month?: string;
     start_date?: string;
     end_date?: string;
@@ -64,6 +65,10 @@ export const financeService = {
 
     if (params?.type) {
       query = query.eq('type', params.type);
+    }
+
+    if (params?.category) {
+      query = query.eq('category', params.category);
     }
 
     if (params?.start_date && params?.end_date) {
@@ -151,6 +156,13 @@ export const financeService = {
     return { data: null, message: 'Transaksi berhasil dihapus' };
   },
 
+  async deleteMany(ids: string[]): Promise<ApiResponse<null>> {
+    const supabase = createClient();
+    const { error } = await supabase.from('finance_transactions').delete().in('id', ids);
+    if (error) throw new Error(error.message);
+    return { data: null, message: 'Transaksi berhasil dihapus' };
+  },
+
   async getSummary(params?: {
     start_date?: string;
     end_date?: string;
@@ -194,6 +206,7 @@ export const financeService = {
   async getAllForExport(params?: {
     search?: string;
     type?: string;
+    category?: string;
     month?: string;
     start_date?: string;
     end_date?: string;
@@ -207,6 +220,10 @@ export const financeService = {
 
     if (params?.type) {
       query = query.eq('type', params.type);
+    }
+
+    if (params?.category) {
+      query = query.eq('category', params.category);
     }
 
     if (params?.start_date && params?.end_date) {

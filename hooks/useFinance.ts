@@ -4,7 +4,7 @@ import { FinanceFormData } from '@/types';
 
 export const FINANCE_KEY = 'finance';
 
-export function useFinanceList(params?: { page?: number; limit?: number; search?: string; type?: string; month?: string; start_date?: string; end_date?: string }) {
+export function useFinanceList(params?: { page?: number; limit?: number; search?: string; type?: string; category?: string; month?: string; start_date?: string; end_date?: string }) {
   return useQuery({
     queryKey: [FINANCE_KEY, params],
     queryFn: () => financeService.getAll(params),
@@ -47,6 +47,14 @@ export function useDeleteFinance() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => financeService.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [FINANCE_KEY] }),
+  });
+}
+
+export function useDeleteManyFinance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => financeService.deleteMany(ids),
     onSuccess: () => qc.invalidateQueries({ queryKey: [FINANCE_KEY] }),
   });
 }
