@@ -17,6 +17,7 @@ const routeLabels: Record<string, string> = {
   management: 'Pengurus',
   prayer: 'Jadwal Sholat',
   friday: 'Jadwal Jumat',
+  users: 'Users',
   settings: 'Pengaturan',
   new: 'Tambah Baru',
   edit: 'Edit',

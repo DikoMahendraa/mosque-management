@@ -1,20 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeService } from '@/services/finance.service';
 import { FinanceFormData } from '@/types';
+import { useAuthStore } from '@/store';
+import { isPrivilegedRole } from '@/lib/permissions';
 
 export const FINANCE_KEY = 'finance';
 
+function useFinanceCategoriesScope() {
+  const { user, financeCategories } = useAuthStore();
+  return isPrivilegedRole(user?.role) ? undefined : financeCategories;
+}
+
 export function useFinanceList(params?: { page?: number; limit?: number; search?: string; type?: string; category?: string; month?: string; start_date?: string; end_date?: string }) {
+  const categories = useFinanceCategoriesScope();
+
   return useQuery({
-    queryKey: [FINANCE_KEY, params],
-    queryFn: () => financeService.getAll(params),
+    queryKey: [FINANCE_KEY, params, categories],
+    queryFn: () => financeService.getAll({ ...params, categories }),
   });
 }
 
 export function useFinanceSummary(params?: { start_date?: string; end_date?: string }) {
+  const categories = useFinanceCategoriesScope();
+
   return useQuery({
-    queryKey: [FINANCE_KEY, 'summary', params],
-    queryFn: () => financeService.getSummary(params),
+    queryKey: [FINANCE_KEY, 'summary', params, categories],
+    queryFn: () => financeService.getSummary({ ...params, categories }),
   });
 }
 

@@ -21,17 +21,57 @@ export interface ApiResponse<T> {
 // AUTH TYPES
 // ============================================================
 
+export type AppRole = 'root_admin' | 'admin' | 'staff';
+export type LegacyRole = 'admin' | 'editor' | 'viewer';
+export type MenuKey =
+  | 'dashboard'
+  | 'landing'
+  | 'kajian'
+  | 'events'
+  | 'finance'
+  | 'ustad'
+  | 'jamaah'
+  | 'management'
+  | 'users'
+  | 'settings';
+export type FinanceCategory = 'Sosial' | 'Kajian' | 'Operasional';
+
 export interface User {
   id: string;
   name?: string;
   email: string;
-  role: 'admin' | 'editor' | 'viewer';
+  role: AppRole;
   avatar?: string;
   user_metadata?: {
     name?: string;
-    role?: 'admin' | 'editor' | 'viewer';
+    role?: AppRole | LegacyRole;
     [key: string]: unknown;
   };
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  role: AppRole;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserAccess {
+  profile: UserProfile;
+  menuPermissions: MenuKey[];
+  financeCategories: FinanceCategory[];
+}
+
+export interface UserAccessFormData {
+  email: string;
+  name: string;
+  role: AppRole;
+  menuPermissions: MenuKey[];
+  financeCategories: FinanceCategory[];
+  is_active: boolean;
 }
 
 // ============================================================

@@ -48,6 +48,7 @@ export const financeService = {
     search?: string;
     type?: string;
     category?: string;
+    categories?: string[];
     month?: string;
     start_date?: string;
     end_date?: string;
@@ -57,6 +58,21 @@ export const financeService = {
     const limit = params?.limit ?? 10;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
+    const allowedCategories = params?.categories;
+
+    if (allowedCategories && allowedCategories.length === 0) {
+      return {
+        data: [],
+        meta: { page, limit, total: 0, totalPages: 0 },
+      };
+    }
+
+    if (params?.category && allowedCategories && !allowedCategories.includes(params.category)) {
+      return {
+        data: [],
+        meta: { page, limit, total: 0, totalPages: 0 },
+      };
+    }
 
     let query = supabase
       .from('finance_transactions')
@@ -69,6 +85,8 @@ export const financeService = {
 
     if (params?.category) {
       query = query.eq('category', params.category);
+    } else if (allowedCategories) {
+      query = query.in('category', allowedCategories);
     }
 
     if (params?.start_date && params?.end_date) {
@@ -164,14 +182,31 @@ export const financeService = {
   },
 
   async getSummary(params?: {
+    categories?: string[];
     start_date?: string;
     end_date?: string;
   }): Promise<ApiResponse<FinanceSummary>> {
     const supabase = createClient();
+    const allowedCategories = params?.categories;
+
+    if (allowedCategories && allowedCategories.length === 0) {
+      return {
+        data: {
+          total_income: 0,
+          total_expense: 0,
+          balance: 0,
+          monthly_data: [],
+        },
+      };
+    }
     
     let query = supabase
       .from('finance_transactions')
       .select('type, amount, date');
+
+    if (allowedCategories) {
+      query = query.in('category', allowedCategories);
+    }
 
     if (params?.start_date && params?.end_date) {
       query = query.gte('date', params.start_date).lte('date', params.end_date);
@@ -207,11 +242,21 @@ export const financeService = {
     search?: string;
     type?: string;
     category?: string;
+    categories?: string[];
     month?: string;
     start_date?: string;
     end_date?: string;
   }): Promise<FinanceTransaction[]> {
     const supabase = createClient();
+    const allowedCategories = params?.categories;
+
+    if (allowedCategories && allowedCategories.length === 0) {
+      return [];
+    }
+
+    if (params?.category && allowedCategories && !allowedCategories.includes(params.category)) {
+      return [];
+    }
 
     let query = supabase
       .from('finance_transactions')
@@ -224,6 +269,8 @@ export const financeService = {
 
     if (params?.category) {
       query = query.eq('category', params.category);
+    } else if (allowedCategories) {
+      query = query.in('category', allowedCategories);
     }
 
     if (params?.start_date && params?.end_date) {

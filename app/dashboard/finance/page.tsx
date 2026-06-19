@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Pencil, Trash2, DollarSign, TrendingUp, TrendingDown, Wallet, Download, MessageCircle,
 } from 'lucide-react';
@@ -33,8 +33,8 @@ import {
 } from 'recharts';
 import dayjs from 'dayjs';
 import { financeService } from '@/services/finance.service';
-
-const FINANCE_CATEGORIES = ['Sosial', 'Kajian', 'Operasional'];
+import { FINANCE_CATEGORIES, isPrivilegedRole } from '@/lib/permissions';
+import { useAuthStore } from '@/store';
 
 const formatIdrInput = (value: number | string) => {
   const digits = String(value).replace(/\D/g, '');
@@ -82,6 +82,7 @@ export default function FinancePage() {
   const updateMutation = useUpdateFinance();
   const deleteMutation = useDeleteFinance();
   const deleteManyMutation = useDeleteManyFinance();
+  const { user, financeCategories } = useAuthStore();
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FinanceFormData>({ defaultValues });
   const [amountDisplay, setAmountDisplay] = useState('');
@@ -94,6 +95,18 @@ export default function FinancePage() {
     () => Array.from(selectedIds).map((id) => selectedTransactionsCache.get(id)).filter(Boolean) as FinanceTransaction[],
     [selectedIds, selectedTransactionsCache]
   );
+  const categories = useMemo(
+    () => isPrivilegedRole(user?.role) ? [...FINANCE_CATEGORIES] : financeCategories,
+    [financeCategories, user?.role]
+  );
+  const allowedCategoryScope = isPrivilegedRole(user?.role) ? undefined : financeCategories;
+
+  useEffect(() => {
+    if (categoryFilter && !categories.includes(categoryFilter as typeof categories[number])) {
+      setCategoryFilter('');
+      setPage(1);
+    }
+  }, [categories, categoryFilter]);
 
   const toggleSelect = (item: FinanceTransaction) => {
     setSelectedIds((prev) => {
@@ -138,7 +151,7 @@ export default function FinancePage() {
 
   const openCreate = () => {
     setEditItem(null);
-    reset(defaultValues);
+    reset({ ...defaultValues, category: categories[0] ?? defaultValues.category });
     setAmountDisplay('');
     setIsModalOpen(true);
   };
@@ -156,6 +169,11 @@ export default function FinancePage() {
     };
 
     try {
+      if (!categories.includes(payload.category as typeof categories[number])) {
+        toast('error', 'Tidak Diizinkan', 'Anda tidak memiliki akses untuk kategori ini');
+        return;
+      }
+
       if (editItem) {
         await updateMutation.mutateAsync({ id: editItem.id, data: payload });
         toast('success', 'Berhasil', 'Transaksi berhasil diupdate');
@@ -202,6 +220,7 @@ export default function FinancePage() {
         search,
         type: typeFilter,
         category: categoryFilter,
+        categories: allowedCategoryScope,
         ...dateRange,
       });
       setShareFilterTransactions(allData);
@@ -224,6 +243,7 @@ export default function FinancePage() {
         search,
         type: typeFilter,
         category: categoryFilter,
+        categories: allowedCategoryScope,
         ...dateRange,
       });
 
@@ -301,7 +321,6 @@ export default function FinancePage() {
   }));
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const categories = FINANCE_CATEGORIES;
   const amountField = register('amount', {
     required: 'Jumlah wajib diisi',
     validate: (value) => parseIdrInput(value) > 0 || 'Jumlah harus lebih dari 0',
@@ -327,7 +346,7 @@ export default function FinancePage() {
           >
             Ekspor CSV
           </Button>
-          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate} disabled={categories.length === 0}>
             Tambah Transaksi
           </Button>
         </div>
