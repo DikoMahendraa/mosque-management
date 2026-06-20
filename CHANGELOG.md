@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.0] - 2026-06-16
 
+## [Unreleased]
+
+### Added
+
+- Role-based dashboard access with `root_admin`, `admin`, and `staff` profiles
+- Users management page for creating, editing, and deleting managed users
+- Menu permission controls for staff dashboard access
+- Finance category permissions for staff users (`Sosial`, `Kajian`, `Operasional`)
+- Server-side user creation with optional temporary password bypassing email verification
+- Admin setting to require email invitation/verification for newly created users
+- Invite activation page for invited users to create their password
+- Bulk delete support for selected finance transactions
+- Category filter on the finance transaction list
+
+### Changed
+
+- Sidebar navigation now only shows menus available to the current user
+- Dashboard pages now block direct URL access when the user lacks menu permission
+- Finance form categories simplified to `Sosial`, `Kajian`, and `Operasional`
+- Finance amount input now displays IDR thousands separators while saving numeric values
+- User creation flow now follows the configured email verification mode
+
+### Security
+
+- Added Supabase profile, menu permission, and finance category permission SQL structure
+- Tightened finance transaction RLS to respect menu and category access
+- Added server-side safeguards so admins cannot edit or delete themselves
+- Restricted admin user management by hierarchy (`root_admin` manages admin/staff, `admin` manages staff)
+- Added service-role-backed user creation and deletion endpoints without exposing the service key to the browser
+
+## [1.1.0] - 2026-06-16
+
 ### Added
 
 - Event and kajian archiving with dedicated archive pages (restore or permanently delete)
@@ -50,6 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First stable release marking production-ready v1
 
+
+[1.4.0]: https://github.com/your-org/dashboard-darussalam/compare/v1.1.0...HEAD
 [1.3.0]: https://github.com/your-org/dashboard-darussalam/releases/tag/v1.3.0
 [1.1.0]: https://github.com/your-org/dashboard-darussalam/releases/tag/v1.1.0
 [1.0.0]: https://github.com/your-org/dashboard-darussalam/releases/tag/v1.0.0

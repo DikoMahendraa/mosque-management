@@ -8,43 +8,38 @@ import {
   BookOpen,
   CalendarDays,
   GraduationCap,
-  // Heart,
-  // Image,
-  // Newspaper,
-  // Star,
   DollarSign,
   Users,
   UserCircle,
-  // Clock,
   Settings,
   X,
 } from 'lucide-react';
-import { useSidebarStore } from '@/store';
+import { useAuthStore, useSidebarStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { AppLogo } from '@/components/ui/AppLogo';
 import { APP_VERSION } from '@/lib/version';
+import { canAccessMenu, DASHBOARD_MENUS, MenuKey } from '@/lib/permissions';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/landing', label: 'Landing Page', icon: Globe },
-  { href: '/dashboard/kajian', label: 'Kajian', icon: BookOpen },
-  { href: '/dashboard/events', label: 'Events', icon: CalendarDays },
-  // { href: '/dashboard/tahsin', label: 'Tahsin', icon: GraduationCap },
-  // { href: '/dashboard/berbagi', label: 'Berbagi', icon: Heart },
-  // { href: '/dashboard/gallery', label: 'Dokumentasi', icon: Image },
-  // { href: '/dashboard/posts', label: 'Berita Terkini', icon: Newspaper },
-  { href: '/dashboard/finance', label: 'Keuangan', icon: DollarSign },
-  { href: '/dashboard/ustad', label: 'Daftar Ustad', icon: GraduationCap },
-  { href: '/dashboard/jamaah', label: 'Daftar Jamaah', icon: UserCircle },
-  { href: '/dashboard/management', label: 'Pengurus', icon: Users },
-  // { href: '/dashboard/prayer', label: 'Jadwal Sholat', icon: Clock },
-  // { href: '/dashboard/friday', label: 'Jadwal Jumat', icon: Star },
-  { href: '/dashboard/settings', label: 'Pengaturan', icon: Settings },
-];
+const menuIcons: Record<MenuKey, React.ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  landing: Globe,
+  kajian: BookOpen,
+  events: CalendarDays,
+  finance: DollarSign,
+  ustad: GraduationCap,
+  jamaah: UserCircle,
+  management: Users,
+  users: Users,
+  settings: Settings,
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { isOpen, isMobileOpen, setMobileOpen } = useSidebarStore();
+  const { user, menuPermissions } = useAuthStore();
+  const navItems = DASHBOARD_MENUS.filter((item) =>
+    canAccessMenu(user?.role, menuPermissions, item.key)
+  );
 
   return (
     <>
@@ -90,7 +85,7 @@ export default function Sidebar() {
               const isActive = item.href === '/dashboard'
                 ? pathname === '/dashboard'
                 : pathname.startsWith(item.href);
-              const Icon = item.icon;
+              const Icon = menuIcons[item.key];
 
               return (
                 <li key={item.href}>

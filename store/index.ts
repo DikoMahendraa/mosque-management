@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Session } from '@supabase/supabase-js';
-import { User } from '@/types';
+import { AppRole, FinanceCategory, MenuKey, User } from '@/types';
+import { ALL_MENU_KEYS, FINANCE_CATEGORIES, isPrivilegedRole, normalizeRole } from '@/lib/permissions';
+import { permissionsService } from '@/services/permissions.service';
 
 // ============================================================
 // SIDEBAR STORE
@@ -38,10 +40,13 @@ interface AuthStore {
   user: User | null;
   isAuthenticated: boolean;
   isInitialized: boolean;
+  isAccessLoaded: boolean;
   session: Session | null;
+  menuPermissions: MenuKey[];
+  financeCategories: FinanceCategory[];
   login: (user: User, session?: Session | null) => void;
   logout: () => void;
-  setSession: (session: Session | null) => void;
+  setSession: (session: Session | null) => Promise<void>;
   initializeAuth: () => Promise<void>;
 }
 
@@ -55,20 +60,81 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
   user: null,
   isAuthenticated: false,
   isInitialized: false,
+  isAccessLoaded: false,
   session: null,
-  login: (user, session = null) => set({ user, isAuthenticated: true, session }),
-  logout: () => set({ user: null, isAuthenticated: false, session: null }),
-  setSession: (session) => {
+  menuPermissions: [],
+  financeCategories: [],
+  login: (user, session = null) => {
+    const role = normalizeRole(user.role);
+    set({
+      user: { ...user, role },
+      isAuthenticated: true,
+      isAccessLoaded: true,
+      session,
+      menuPermissions: isPrivilegedRole(role) ? [...ALL_MENU_KEYS] : ['dashboard'],
+      financeCategories: isPrivilegedRole(role) ? [...FINANCE_CATEGORIES] : [],
+    });
+  },
+  logout: () => set({
+    user: null,
+    isAuthenticated: false,
+    isAccessLoaded: false,
+    session: null,
+    menuPermissions: [],
+    financeCategories: [],
+  }),
+  setSession: async (session) => {
     if (session?.user) {
-      const user: User = {
+      const metadataRole = normalizeRole(String(session.user.user_metadata?.role ?? 'staff'));
+      const fallbackUser: User = {
         id: session.user.id,
         email: session.user.email || '',
         name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
-        role: session.user.user_metadata?.role || 'editor',
+        role: metadataRole,
         avatar: session.user.user_metadata?.avatar,
         user_metadata: session.user.user_metadata,
       };
-      set({ user, isAuthenticated: true, session });
+
+      set({
+        user: fallbackUser,
+        isAuthenticated: true,
+        isAccessLoaded: false,
+        session,
+      });
+
+      try {
+        const access = await permissionsService.getCurrentUserAccess(session.user.id);
+        const role: AppRole = access?.profile.role ?? metadataRole;
+        set({
+          user: {
+            ...fallbackUser,
+            name: access?.profile.name || fallbackUser.name,
+            email: access?.profile.email || fallbackUser.email,
+            role,
+          },
+          isAuthenticated: access?.profile.is_active ?? true,
+          isAccessLoaded: true,
+          session,
+          menuPermissions: isPrivilegedRole(role)
+            ? [...ALL_MENU_KEYS]
+            : access?.menuPermissions.length
+              ? access.menuPermissions
+              : ['dashboard'],
+          financeCategories: isPrivilegedRole(role)
+            ? [...FINANCE_CATEGORIES]
+            : access?.financeCategories ?? [],
+        });
+      } catch (error) {
+        console.error('Failed to load user permissions:', error);
+        set({
+          user: fallbackUser,
+          isAuthenticated: true,
+          isAccessLoaded: true,
+          session,
+          menuPermissions: isPrivilegedRole(metadataRole) ? [...ALL_MENU_KEYS] : ['dashboard'],
+          financeCategories: isPrivilegedRole(metadataRole) ? [...FINANCE_CATEGORIES] : [],
+        });
+      }
     } else {
       set({ user: null, isAuthenticated: false, session: null });
     }
@@ -82,7 +148,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
-        get().setSession(session);
+        await get().setSession(session);
       } else {
         get().logout();
       }

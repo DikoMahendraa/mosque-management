@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import { AppSetting, WhatsAppSettings, AISettings, ApiResponse } from '@/types';
+import { AppSetting, AuthSettings, WhatsAppSettings, ApiResponse, AISettings } from '@/types';
 
 function mapSetting(row: Record<string, unknown>): AppSetting {
   return {
@@ -129,6 +129,40 @@ export const settingsService = {
     }
   },
 
+  async getAuthSettings(): Promise<AuthSettings> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('*')
+      .eq('setting_key', 'auth_require_email_verification_for_new_users')
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+
+    return {
+      requireEmailVerificationForNewUsers: data?.setting_value === 'true',
+    };
+  },
+
+  async updateAuthSettings(settings: Partial<AuthSettings>): Promise<void> {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (settings.requireEmailVerificationForNewUsers === undefined) return;
+
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({
+        setting_key: 'auth_require_email_verification_for_new_users',
+        setting_value: String(settings.requireEmailVerificationForNewUsers),
+        setting_type: 'boolean',
+        description: 'Require email invitation/verification for newly created users',
+        ...(user ? { updated_by: user.id } : {}),
+      }, { onConflict: 'setting_key' });
+
+    if (error) throw new Error(error.message);
+  },
+
   async getAISettings(): Promise<AISettings> {
     const supabase = createClient();
     const { data, error } = await supabase
@@ -211,5 +245,5 @@ export const settingsService = {
 
       if (error) throw new Error(error.message);
     }
-  },
+  }
 };

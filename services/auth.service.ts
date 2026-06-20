@@ -1,6 +1,7 @@
 import { User } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import type { Session } from '@supabase/supabase-js';
+import { normalizeRole } from '@/lib/permissions';
 
 interface LoginPayload {
   email: string;
@@ -39,7 +40,7 @@ export const authService = {
       id: data.user.id,
       email: data.user.email || '',
       name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || '',
-      role: data.user.user_metadata?.role || 'editor',
+      role: normalizeRole(String(data.user.user_metadata?.role ?? 'staff')),
       avatar: data.user.user_metadata?.avatar,
       user_metadata: data.user.user_metadata,
     };
@@ -59,7 +60,7 @@ export const authService = {
       options: {
         data: {
           name: payload.name,
-          role: 'editor', // Default role for new users
+          role: 'staff',
         },
       },
     });
@@ -76,7 +77,7 @@ export const authService = {
       id: data.user.id,
       email: data.user.email || '',
       name: data.user.user_metadata?.name || payload.name,
-      role: data.user.user_metadata?.role || 'editor',
+      role: normalizeRole(String(data.user.user_metadata?.role ?? 'staff')),
       avatar: data.user.user_metadata?.avatar,
       user_metadata: data.user.user_metadata,
     };
@@ -122,7 +123,7 @@ export const authService = {
       id: user.id,
       email: user.email || '',
       name: user.user_metadata?.name || user.email?.split('@')[0] || '',
-      role: user.user_metadata?.role || 'editor',
+      role: normalizeRole(String(user.user_metadata?.role ?? 'staff')),
       avatar: user.user_metadata?.avatar,
       user_metadata: user.user_metadata,
     };

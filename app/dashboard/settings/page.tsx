@@ -9,8 +9,10 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store';
-import { useWhatsAppSettings, useUpdateWhatsAppSettings, useAISettings, useUpdateAISettings } from '@/hooks/useSettings';
 import { AIProvider } from '@/types';
+
+import { useAuthSettings, useUpdateAuthSettings, useWhatsAppSettings, useUpdateWhatsAppSettings, useAISettings, useUpdateAISettings } from '@/hooks/useSettings';
+import { isPrivilegedRole } from '@/lib/permissions';
 
 type Tab = 'profile' | 'notifications' | 'security' | 'appearance' | 'whatsapp' | 'ai';
 type WhatsAppProvider = 'fonnte' | 'wablas' | 'twilio';
@@ -28,6 +30,10 @@ interface AIFormState {
   gemini_api_key: string;
   openai_api_key: string;
   mosque_name: string;
+}
+
+interface AuthFormState {
+  requireEmailVerificationForNewUsers: boolean;
 }
 
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
@@ -50,12 +56,15 @@ export default function SettingsPage() {
   // WhatsApp API settings
   const { data: whatsappSettings, isLoading: isLoadingWhatsApp } = useWhatsAppSettings();
   const updateWhatsAppMutation = useUpdateWhatsAppSettings();
+  const { data: authSettings, isLoading: isLoadingAuthSettings } = useAuthSettings();
+  const updateAuthSettingsMutation = useUpdateAuthSettings();
 
   const { data: aiSettings, isLoading: isLoadingAI } = useAISettings();
   const updateAIMutation = useUpdateAISettings();
 
   const [waDraft, setWaDraft] = useState<WhatsAppFormState | null>(null);
   const [aiDraft, setAiDraft] = useState<AIFormState | null>(null);
+  const [authDraft, setAuthDraft] = useState<AuthFormState | null>(null);
 
   const waForm: WhatsAppFormState = waDraft ?? {
     enabled: whatsappSettings?.enabled ?? false,
@@ -78,6 +87,14 @@ export default function SettingsPage() {
 
   const updateAiForm = (patch: Partial<AIFormState>) => {
     setAiDraft({ ...aiForm, ...patch });
+  }
+
+  const authForm: AuthFormState = authDraft ?? {
+    requireEmailVerificationForNewUsers: authSettings?.requireEmailVerificationForNewUsers ?? false,
+  };
+
+  const updateAuthForm = (patch: Partial<AuthFormState>) => {
+    setAuthDraft({ ...authForm, ...patch });
   };
 
   const handleSaveProfile = async () => {
@@ -113,6 +130,17 @@ export default function SettingsPage() {
       });
       setAiDraft(null);
       toast('success', 'Berhasil', 'Pengaturan Integrasi AI berhasil disimpan');
+
+    } catch {
+      toast('error', 'Gagal', 'Terjadi kesalahan saat menyimpan');
+    }
+  };
+
+  const handleSaveAuthSettings = async () => {
+    try {
+      await updateAuthSettingsMutation.mutateAsync(authForm);
+      setAuthDraft(null);
+      toast('success', 'Berhasil', 'Pengaturan user baru berhasil disimpan');
     } catch {
       toast('error', 'Gagal', 'Terjadi kesalahan saat menyimpan');
     }
@@ -122,7 +150,7 @@ export default function SettingsPage() {
     <DashboardLayout title="Pengaturan" description="Kelola pengaturan akun dan aplikasi">
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Sidebar Tabs */}
-        <div className="w-full lg:w-56 flex-shrink-0">
+        <div className="w-full lg:w-56 shrink-0">
           <Card padding="sm">
             <nav className="space-y-1">
               {tabs.map((tab) => {
@@ -131,13 +159,12 @@ export default function SettingsPage() {
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors text-left ${
-                      activeTab === tab.key
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
-                    }`}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors text-left ${activeTab === tab.key
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                      }`}
                   >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <Icon className="h-4 w-4 shrink-0" />
                     {tab.label}
                   </button>
                 );
@@ -153,7 +180,7 @@ export default function SettingsPage() {
               <h3 className="mb-4 text-base font-semibold text-gray-900">Informasi Profil</h3>
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-xl font-bold text-emerald-700 flex-shrink-0">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xl font-bold text-emerald-700">
                     {name[0] ?? 'A'}
                   </div>
                   <div>
@@ -179,7 +206,7 @@ export default function SettingsPage() {
               <p className="mb-6 text-sm text-gray-600">
                 Konfigurasi WhatsApp API untuk mengirim broadcast kajian dan event ke jamaah.
               </p>
-              
+
               {isLoadingWhatsApp ? (
                 <div className="text-center py-8 text-gray-500">Memuat pengaturan...</div>
               ) : (
@@ -193,11 +220,11 @@ export default function SettingsPage() {
                         </p>
                       </div>
                       <label className="relative inline-flex cursor-pointer items-center">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={waForm.enabled}
                           onChange={(e) => updateWaForm({ enabled: e.target.checked })}
-                          className="peer sr-only" 
+                          className="peer sr-only"
                         />
                         <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full" />
                       </label>
@@ -244,11 +271,11 @@ export default function SettingsPage() {
 
                       <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
                         <p className="text-xs text-blue-800">
-                          💡 <strong>Tip:</strong> Pastikan nomor WhatsApp sudah terverifikasi di provider yang Anda pilih. 
+                          💡 <strong>Tip:</strong> Pastikan nomor WhatsApp sudah terverifikasi di provider yang Anda pilih.
                           Untuk Fonnte, kunjit{' '}
-                          <a 
-                            href="https://fonnte.com" 
-                            target="_blank" 
+                          <a
+                            href="https://fonnte.com"
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="underline font-medium"
                           >
@@ -260,8 +287,8 @@ export default function SettingsPage() {
                   )}
 
                   <div className="flex justify-end pt-2">
-                    <Button 
-                      onClick={handleSaveWhatsApp} 
+                    <Button
+                      onClick={handleSaveWhatsApp}
                       isLoading={updateWhatsAppMutation.isPending}
                       leftIcon={<Save className="h-4 w-4" />}
                     >
@@ -405,6 +432,43 @@ export default function SettingsPage() {
             <Card padding="md">
               <h3 className="mb-4 text-base font-semibold text-gray-900">Keamanan Akun</h3>
               <div className="space-y-4">
+                {isPrivilegedRole(user?.role) && (
+                  <div className="rounded-xl border border-gray-100 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">Wajib Verifikasi Email untuk User Baru</p>
+                        <p className="text-xs text-gray-500">
+                          Jika aktif, form tambah user akan mengirim undangan email dan menyembunyikan password sementara.
+                        </p>
+                      </div>
+                      <label className="relative inline-flex cursor-pointer items-center">
+                        <input
+                          type="checkbox"
+                          checked={authForm.requireEmailVerificationForNewUsers}
+                          disabled={isLoadingAuthSettings}
+                          onChange={(e) => updateAuthForm({ requireEmailVerificationForNewUsers: e.target.checked })}
+                          className="peer sr-only"
+                        />
+                        <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full peer-disabled:opacity-50" />
+                      </label>
+                    </div>
+                    <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                      {authForm.requireEmailVerificationForNewUsers
+                        ? 'Mode aktif: user baru harus menerima email undangan dan membuat password dari link.'
+                        : 'Mode nonaktif: admin membuat user langsung dengan password sementara tanpa email konfirmasi.'}
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        onClick={handleSaveAuthSettings}
+                        isLoading={updateAuthSettingsMutation.isPending}
+                        leftIcon={<Save className="h-4 w-4" />}
+                      >
+                        Simpan Pengaturan User
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <Input label="Password Lama" type="password" placeholder="••••••••" />
                 <Input label="Password Baru" type="password" placeholder="••••••••" />
                 <Input label="Konfirmasi Password Baru" type="password" placeholder="••••••••" />

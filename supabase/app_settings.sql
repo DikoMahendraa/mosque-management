@@ -1,5 +1,5 @@
 -- Create app_settings table for global application settings
-CREATE TABLE public.app_settings (
+CREATE TABLE IF NOT EXISTS public.app_settings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   setting_key text NOT NULL UNIQUE,
   setting_value text,
@@ -11,6 +11,7 @@ CREATE TABLE public.app_settings (
 );
 
 -- Auto-update updated_at
+DROP TRIGGER IF EXISTS app_settings_updated_at ON public.app_settings;
 CREATE TRIGGER app_settings_updated_at
   BEFORE UPDATE ON public.app_settings
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
@@ -19,6 +20,11 @@ CREATE TRIGGER app_settings_updated_at
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies
+DROP POLICY IF EXISTS "Public can read app_settings" ON public.app_settings;
+DROP POLICY IF EXISTS "Authenticated users can insert app_settings" ON public.app_settings;
+DROP POLICY IF EXISTS "Authenticated users can update app_settings" ON public.app_settings;
+DROP POLICY IF EXISTS "Authenticated users can delete app_settings" ON public.app_settings;
+
 CREATE POLICY "Public can read app_settings"
   ON public.app_settings FOR SELECT
   USING (true);
@@ -44,4 +50,6 @@ VALUES
   ('whatsapp_api_enabled', 'false', 'boolean', 'Enable/disable WhatsApp API broadcast feature'),
   ('whatsapp_api_provider', 'fonnte', 'string', 'WhatsApp API provider (fonnte, wablas, twilio)'),
   ('whatsapp_api_token', '', 'string', 'WhatsApp API token/key'),
-  ('whatsapp_api_device', '', 'string', 'WhatsApp device number or sender');
+  ('whatsapp_api_device', '', 'string', 'WhatsApp device number or sender'),
+  ('auth_require_email_verification_for_new_users', 'false', 'boolean', 'Require email invitation/verification for newly created users')
+ON CONFLICT (setting_key) DO NOTHING;

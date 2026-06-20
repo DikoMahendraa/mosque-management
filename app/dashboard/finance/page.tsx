@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Pencil, Trash2, DollarSign, TrendingUp, TrendingDown, Wallet, Download, MessageCircle,
 } from 'lucide-react';
@@ -18,7 +18,7 @@ import Textarea from '@/components/ui/Textarea';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import FinanceShareModal from '@/components/finance/FinanceShareModal';
-import { useFinanceList, useFinanceSummary, useCreateFinance, useUpdateFinance, useDeleteFinance } from '@/hooks/useFinance';
+import { useFinanceList, useFinanceSummary, useCreateFinance, useUpdateFinance, useDeleteFinance, useDeleteManyFinance } from '@/hooks/useFinance';
 import { FinanceTransaction, FinanceFormData } from '@/types';
 import { formatDate, formatCurrency, exportToCSV } from '@/lib/utils';
 import {
@@ -33,13 +33,21 @@ import {
 } from 'recharts';
 import dayjs from 'dayjs';
 import { financeService } from '@/services/finance.service';
+import { FINANCE_CATEGORIES, isPrivilegedRole } from '@/lib/permissions';
+import { useAuthStore } from '@/store';
 
-const INCOME_CATEGORIES = ['Infaq', 'Donasi', 'Wakaf', 'Zakat', 'Lainnya'];
-const EXPENSE_CATEGORIES = ['Honor', 'Operasional', 'Maintenance', 'Kegiatan', 'Lainnya'];
+const formatIdrInput = (value: number | string) => {
+  const digits = String(value).replace(/\D/g, '');
+  if (!digits) return '';
+
+  return new Intl.NumberFormat('id-ID').format(Number(digits));
+};
+
+const parseIdrInput = (value: number | string) => Number(String(value).replace(/\D/g, '')) || 0;
 
 const defaultValues: FinanceFormData = {
   title: '',
-  category: 'Infaq',
+  category: 'Sosial',
   amount: 0,
   date: '',
   description: '',
@@ -50,9 +58,11 @@ export default function FinancePage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<FinanceTransaction | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareFilterTransactions, setShareFilterTransactions] = useState<FinanceTransaction[]>([]);
@@ -66,14 +76,16 @@ export default function FinancePage() {
   const dateRange = getFinanceDateRange(dateFilter, startDate, endDate);
   const periodLabel = getFinancePeriodLabel(dateFilter, startDate, endDate, dateRange);
 
-  const { data, isLoading } = useFinanceList({ page, limit: 8, search, type: typeFilter, ...dateRange });
+  const { data, isLoading } = useFinanceList({ page, limit: 8, search, type: typeFilter, category: categoryFilter, ...dateRange });
   const { data: summaryData } = useFinanceSummary(dateRange);
   const createMutation = useCreateFinance();
   const updateMutation = useUpdateFinance();
   const deleteMutation = useDeleteFinance();
+  const deleteManyMutation = useDeleteManyFinance();
+  const { user, financeCategories } = useAuthStore();
 
-  const [typeValue, setTypeValue] = useState<'income' | 'expense'>('income');
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FinanceFormData>({ defaultValues });
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FinanceFormData>({ defaultValues });
+  const [amountDisplay, setAmountDisplay] = useState('');
 
   const pageItems = data?.data ?? [];
   const allPageSelected = pageItems.length > 0 && pageItems.every((item) => selectedIds.has(item.id));
@@ -83,6 +95,18 @@ export default function FinancePage() {
     () => Array.from(selectedIds).map((id) => selectedTransactionsCache.get(id)).filter(Boolean) as FinanceTransaction[],
     [selectedIds, selectedTransactionsCache]
   );
+  const categories = useMemo(
+    () => isPrivilegedRole(user?.role) ? [...FINANCE_CATEGORIES] : financeCategories,
+    [financeCategories, user?.role]
+  );
+  const allowedCategoryScope = isPrivilegedRole(user?.role) ? undefined : financeCategories;
+
+  useEffect(() => {
+    if (categoryFilter && !categories.includes(categoryFilter as typeof categories[number])) {
+      setCategoryFilter('');
+      setPage(1);
+    }
+  }, [categories, categoryFilter]);
 
   const toggleSelect = (item: FinanceTransaction) => {
     setSelectedIds((prev) => {
@@ -125,21 +149,36 @@ export default function FinancePage() {
     }
   };
 
-  const openCreate = () => { setEditItem(null); reset(defaultValues); setIsModalOpen(true); };
+  const openCreate = () => {
+    setEditItem(null);
+    reset({ ...defaultValues, category: categories[0] ?? defaultValues.category });
+    setAmountDisplay('');
+    setIsModalOpen(true);
+  };
   const openEdit = (item: FinanceTransaction) => {
     setEditItem(item);
     reset({ title: item.title, category: item.category, amount: item.amount, date: item.date, description: item.description, type: item.type });
-    setTypeValue(item.type);
+    setAmountDisplay(formatIdrInput(item.amount));
     setIsModalOpen(true);
   };
 
   const onSubmit = async (formData: FinanceFormData) => {
+    const payload: FinanceFormData = {
+      ...formData,
+      amount: parseIdrInput(formData.amount),
+    };
+
     try {
+      if (!categories.includes(payload.category as typeof categories[number])) {
+        toast('error', 'Tidak Diizinkan', 'Anda tidak memiliki akses untuk kategori ini');
+        return;
+      }
+
       if (editItem) {
-        await updateMutation.mutateAsync({ id: editItem.id, data: formData });
+        await updateMutation.mutateAsync({ id: editItem.id, data: payload });
         toast('success', 'Berhasil', 'Transaksi berhasil diupdate');
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(payload);
         toast('success', 'Berhasil', 'Transaksi berhasil ditambahkan');
       }
       setIsModalOpen(false);
@@ -160,6 +199,19 @@ export default function FinancePage() {
     } catch { toast('error', 'Gagal', 'Terjadi kesalahan'); }
   };
 
+  const onBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    try {
+      await deleteManyMutation.mutateAsync(ids);
+      toast('success', 'Berhasil', `${ids.length} transaksi berhasil dihapus`);
+      setIsBulkDeleteOpen(false);
+      setSelectedIds(new Set());
+      setSelectedTransactionsCache(new Map());
+    } catch { toast('error', 'Gagal', 'Terjadi kesalahan'); }
+  };
+
   const handleOpenShare = async () => {
     setShareLoading(true);
     setIsShareOpen(true);
@@ -167,6 +219,8 @@ export default function FinancePage() {
       const allData = await financeService.getAllForExport({
         search,
         type: typeFilter,
+        category: categoryFilter,
+        categories: allowedCategoryScope,
         ...dateRange,
       });
       setShareFilterTransactions(allData);
@@ -188,6 +242,8 @@ export default function FinancePage() {
       const allData = await financeService.getAllForExport({
         search,
         type: typeFilter,
+        category: categoryFilter,
+        categories: allowedCategoryScope,
         ...dateRange,
       });
 
@@ -265,7 +321,10 @@ export default function FinancePage() {
   }));
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const categories = typeValue === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const amountField = register('amount', {
+    required: 'Jumlah wajib diisi',
+    validate: (value) => parseIdrInput(value) > 0 || 'Jumlah harus lebih dari 0',
+  });
 
   return (
     <DashboardLayout
@@ -287,7 +346,7 @@ export default function FinancePage() {
           >
             Ekspor CSV
           </Button>
-          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate} disabled={categories.length === 0}>
             Tambah Transaksi
           </Button>
         </div>
@@ -368,6 +427,15 @@ export default function FinancePage() {
             />
             <Select
               options={[
+                { value: '', label: 'Semua Kategori' },
+                ...categories.map((category) => ({ value: category, label: category })),
+              ]}
+              value={categoryFilter}
+              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+              className="sm:w-52"
+            />
+            <Select
+              options={[
                 { value: 'all', label: 'Semua Periode' },
                 { value: 'today', label: 'Hari Ini' },
                 { value: 'friday', label: 'Per Jumat' },
@@ -417,6 +485,14 @@ export default function FinancePage() {
               </button>
               <Button size="sm" variant="secondary" leftIcon={<MessageCircle className="h-3.5 w-3.5" />} onClick={handleOpenShare}>
                 Bagikan terpilih
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                onClick={() => setIsBulkDeleteOpen(true)}
+              >
+                Hapus terpilih
               </Button>
             </div>
           )}
@@ -494,12 +570,27 @@ export default function FinancePage() {
             label="Tipe Transaksi"
             options={[{ value: 'income', label: 'Pemasukan' }, { value: 'expense', label: 'Pengeluaran' }]}
             {...register('type')}
-            onChange={(e) => setTypeValue(e.target.value as 'income' | 'expense')}
           />
           <Input label="Keterangan" required error={errors.title?.message} {...register('title', { required: 'Keterangan wajib diisi' })} />
           <div className="grid grid-cols-2 gap-4">
             <Select label="Kategori" options={categories.map((c) => ({ value: c, label: c }))} {...register('category')} />
-            <Input label="Jumlah (Rp)" type="number" required error={errors.amount?.message} {...register('amount', { required: 'Jumlah wajib diisi', valueAsNumber: true })} />
+            <Input
+              label="Jumlah (Rp)"
+              type="text"
+              inputMode="numeric"
+              required
+              error={errors.amount?.message}
+              placeholder="1.000.000"
+              name={amountField.name}
+              ref={amountField.ref}
+              onBlur={amountField.onBlur}
+              value={amountDisplay}
+              onChange={(e) => {
+                const amount = parseIdrInput(e.target.value);
+                setAmountDisplay(formatIdrInput(e.target.value));
+                setValue('amount', amount, { shouldDirty: true, shouldValidate: true });
+              }}
+            />
           </div>
           <Input label="Tanggal" type="date" required error={errors.date?.message} {...register('date', { required: 'Tanggal wajib diisi' })} />
           <Textarea label="Keterangan Tambahan" rows={3} {...register('description')} />
@@ -521,6 +612,15 @@ export default function FinancePage() {
       />
 
       <ConfirmDialog isOpen={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} isLoading={deleteMutation.isPending} />
+      <ConfirmDialog
+        isOpen={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        onConfirm={onBulkDelete}
+        title="Konfirmasi Hapus Terpilih"
+        message={`Apakah Anda yakin ingin menghapus ${selectedIds.size} transaksi terpilih? Tindakan ini tidak dapat dibatalkan.`}
+        confirmLabel="Hapus Terpilih"
+        isLoading={deleteManyMutation.isPending}
+      />
     </DashboardLayout>
   );
 }
