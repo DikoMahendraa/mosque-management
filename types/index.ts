@@ -68,6 +68,7 @@ export interface UserAccess {
 export interface UserAccessFormData {
   email: string;
   name: string;
+  temporaryPassword?: string;
   role: AppRole;
   menuPermissions: MenuKey[];
   financeCategories: FinanceCategory[];
@@ -451,6 +452,10 @@ export interface WhatsAppSettings {
   provider: 'fonnte' | 'wablas' | 'twilio';
   token: string;
   device: string;
+}
+
+export interface AuthSettings {
+  requireEmailVerificationForNewUsers: boolean;
 }
 
 // ============================================================

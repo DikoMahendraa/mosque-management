@@ -14,6 +14,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { toast } from '@/components/ui/Toast';
 import { useDeleteUser, useInviteUser, useUpdateUserAccess, useUsersAccessList } from '@/hooks/usePermissions';
+import { useAuthSettings } from '@/hooks/useSettings';
 import { AppRole, MenuKey, UserAccess, UserAccessFormData } from '@/types';
 import { DASHBOARD_MENUS, FINANCE_CATEGORIES } from '@/lib/permissions';
 import { useAuthStore } from '@/store';
@@ -21,6 +22,7 @@ import { useAuthStore } from '@/store';
 const defaultForm: UserAccessFormData = {
   email: '',
   name: '',
+  temporaryPassword: '',
   role: 'staff',
   menuPermissions: ['dashboard'],
   financeCategories: [],
@@ -46,12 +48,14 @@ export default function UsersPage() {
   const inviteMutation = useInviteUser();
   const updateMutation = useUpdateUserAccess();
   const deleteMutation = useDeleteUser();
+  const { data: authSettings, isLoading: isLoadingAuthSettings } = useAuthSettings();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<UserAccess | null>(null);
   const [deleteItem, setDeleteItem] = useState<UserAccess | null>(null);
   const [form, setForm] = useState<UserAccessFormData>(defaultForm);
 
   const users = data?.data ?? [];
+  const requireEmailVerification = authSettings?.requireEmailVerificationForNewUsers ?? false;
   const isSubmitting = inviteMutation.isPending || updateMutation.isPending;
   const canAssignRoot = user?.role === 'root_admin';
   const roleOptions = [
@@ -70,6 +74,7 @@ export default function UsersPage() {
     setForm({
       email: item.profile.email,
       name: item.profile.name,
+      temporaryPassword: '',
       role: item.profile.role,
       menuPermissions: item.menuPermissions.length > 0 ? item.menuPermissions : ['dashboard'],
       financeCategories: item.financeCategories,
@@ -109,6 +114,7 @@ export default function UsersPage() {
 
     const payload: UserAccessFormData = {
       ...form,
+      temporaryPassword: requireEmailVerification ? '' : form.temporaryPassword,
       menuPermissions: form.menuPermissions.includes('dashboard')
         ? form.menuPermissions
         : (['dashboard', ...form.menuPermissions] as MenuKey[]),
@@ -121,7 +127,13 @@ export default function UsersPage() {
         toast('success', 'Berhasil', 'Hak akses user berhasil diupdate');
       } else {
         await inviteMutation.mutateAsync(payload);
-        toast('success', 'Berhasil', 'Undangan user berhasil dikirim');
+        toast(
+          'success',
+          'Berhasil',
+          requireEmailVerification
+            ? 'Undangan user berhasil dikirim'
+            : 'User berhasil dibuat dan sudah bisa login'
+        );
       }
       setIsModalOpen(false);
     } catch (error) {
@@ -244,6 +256,24 @@ export default function UsersPage() {
             />
           </div>
 
+          {!editItem && !requireEmailVerification && (
+            <Input
+              label="Password Sementara"
+              type="password"
+              required
+              placeholder="Minimal 6 karakter"
+              value={form.temporaryPassword ?? ''}
+              onChange={(event) => setForm((prev) => ({ ...prev, temporaryPassword: event.target.value }))}
+              hint="User bisa login langsung tanpa email konfirmasi menggunakan password ini."
+            />
+          )}
+
+          {!editItem && requireEmailVerification && (
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Mode verifikasi email aktif. User baru akan menerima undangan email dan membuat password dari link tersebut.
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
               label="Role"
@@ -312,7 +342,9 @@ export default function UsersPage() {
 
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Batal</Button>
-            <Button type="submit" isLoading={isSubmitting}>{editItem ? 'Simpan Perubahan' : 'Kirim Undangan'}</Button>
+            <Button type="submit" isLoading={isSubmitting || isLoadingAuthSettings}>
+              {editItem ? 'Simpan Perubahan' : requireEmailVerification ? 'Kirim Undangan' : 'Buat User'}
+            </Button>
           </div>
         </form>
       </Modal>

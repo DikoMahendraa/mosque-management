@@ -9,7 +9,8 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { toast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store';
-import { useWhatsAppSettings, useUpdateWhatsAppSettings } from '@/hooks/useSettings';
+import { useAuthSettings, useUpdateAuthSettings, useWhatsAppSettings, useUpdateWhatsAppSettings } from '@/hooks/useSettings';
+import { isPrivilegedRole } from '@/lib/permissions';
 
 type Tab = 'profile' | 'notifications' | 'security' | 'appearance' | 'whatsapp';
 type WhatsAppProvider = 'fonnte' | 'wablas' | 'twilio';
@@ -19,6 +20,10 @@ interface WhatsAppFormState {
   provider: WhatsAppProvider;
   token: string;
   device: string;
+}
+
+interface AuthFormState {
+  requireEmailVerificationForNewUsers: boolean;
 }
 
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
@@ -40,8 +45,11 @@ export default function SettingsPage() {
   // WhatsApp API settings
   const { data: whatsappSettings, isLoading: isLoadingWhatsApp } = useWhatsAppSettings();
   const updateWhatsAppMutation = useUpdateWhatsAppSettings();
+  const { data: authSettings, isLoading: isLoadingAuthSettings } = useAuthSettings();
+  const updateAuthSettingsMutation = useUpdateAuthSettings();
 
   const [waDraft, setWaDraft] = useState<WhatsAppFormState | null>(null);
+  const [authDraft, setAuthDraft] = useState<AuthFormState | null>(null);
 
   const waForm: WhatsAppFormState = waDraft ?? {
     enabled: whatsappSettings?.enabled ?? false,
@@ -52,6 +60,14 @@ export default function SettingsPage() {
 
   const updateWaForm = (patch: Partial<WhatsAppFormState>) => {
     setWaDraft({ ...waForm, ...patch });
+  };
+
+  const authForm: AuthFormState = authDraft ?? {
+    requireEmailVerificationForNewUsers: authSettings?.requireEmailVerificationForNewUsers ?? false,
+  };
+
+  const updateAuthForm = (patch: Partial<AuthFormState>) => {
+    setAuthDraft({ ...authForm, ...patch });
   };
 
   const handleSaveProfile = async () => {
@@ -76,11 +92,21 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveAuthSettings = async () => {
+    try {
+      await updateAuthSettingsMutation.mutateAsync(authForm);
+      setAuthDraft(null);
+      toast('success', 'Berhasil', 'Pengaturan user baru berhasil disimpan');
+    } catch {
+      toast('error', 'Gagal', 'Terjadi kesalahan saat menyimpan');
+    }
+  };
+
   return (
     <DashboardLayout title="Pengaturan" description="Kelola pengaturan akun dan aplikasi">
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Sidebar Tabs */}
-        <div className="w-full lg:w-56 flex-shrink-0">
+        <div className="w-full lg:w-56 shrink-0">
           <Card padding="sm">
             <nav className="space-y-1">
               {tabs.map((tab) => {
@@ -95,7 +121,7 @@ export default function SettingsPage() {
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                     }`}
                   >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <Icon className="h-4 w-4 shrink-0" />
                     {tab.label}
                   </button>
                 );
@@ -111,7 +137,7 @@ export default function SettingsPage() {
               <h3 className="mb-4 text-base font-semibold text-gray-900">Informasi Profil</h3>
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-xl font-bold text-emerald-700 flex-shrink-0">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xl font-bold text-emerald-700">
                     {name[0] ?? 'A'}
                   </div>
                   <div>
@@ -260,6 +286,43 @@ export default function SettingsPage() {
             <Card padding="md">
               <h3 className="mb-4 text-base font-semibold text-gray-900">Keamanan Akun</h3>
               <div className="space-y-4">
+                {isPrivilegedRole(user?.role) && (
+                  <div className="rounded-xl border border-gray-100 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">Wajib Verifikasi Email untuk User Baru</p>
+                        <p className="text-xs text-gray-500">
+                          Jika aktif, form tambah user akan mengirim undangan email dan menyembunyikan password sementara.
+                        </p>
+                      </div>
+                      <label className="relative inline-flex cursor-pointer items-center">
+                        <input
+                          type="checkbox"
+                          checked={authForm.requireEmailVerificationForNewUsers}
+                          disabled={isLoadingAuthSettings}
+                          onChange={(e) => updateAuthForm({ requireEmailVerificationForNewUsers: e.target.checked })}
+                          className="peer sr-only"
+                        />
+                        <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full peer-disabled:opacity-50" />
+                      </label>
+                    </div>
+                    <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                      {authForm.requireEmailVerificationForNewUsers
+                        ? 'Mode aktif: user baru harus menerima email undangan dan membuat password dari link.'
+                        : 'Mode nonaktif: admin membuat user langsung dengan password sementara tanpa email konfirmasi.'}
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        onClick={handleSaveAuthSettings}
+                        isLoading={updateAuthSettingsMutation.isPending}
+                        leftIcon={<Save className="h-4 w-4" />}
+                      >
+                        Simpan Pengaturan User
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <Input label="Password Lama" type="password" placeholder="••••••••" />
                 <Input label="Password Baru" type="password" placeholder="••••••••" />
                 <Input label="Konfirmasi Password Baru" type="password" placeholder="••••••••" />

@@ -42,6 +42,7 @@ export async function POST(request: Request) {
   const payload = await request.json();
   const email = String(payload.email ?? '').trim().toLowerCase();
   const name = String(payload.name ?? '').trim();
+  const temporaryPassword = String(payload.temporaryPassword ?? '');
   const role = normalizeRole(String(payload.role ?? 'staff'));
   const isActive = Boolean(payload.is_active ?? true);
   const menuPermissions = Array.from(new Set(payload.menuPermissions ?? [])).filter((key): key is string =>
@@ -53,6 +54,10 @@ export async function POST(request: Request) {
 
   if (!email) {
     return NextResponse.json({ message: 'Email wajib diisi' }, { status: 400 });
+  }
+
+  if (temporaryPassword && temporaryPassword.length < 6) {
+    return NextResponse.json({ message: 'Password sementara minimal 6 karakter' }, { status: 400 });
   }
 
   if (role === 'root_admin' && currentProfile.role !== 'root_admin') {
@@ -80,25 +85,46 @@ export async function POST(request: Request) {
     }
   );
 
-  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
-    email,
-    {
-      data: {
+  const { data: authSetting } = await admin
+    .from('app_settings')
+    .select('setting_value')
+    .eq('setting_key', 'auth_require_email_verification_for_new_users')
+    .maybeSingle();
+  const requireEmailVerification = authSetting?.setting_value === 'true';
+
+  if (!requireEmailVerification && !temporaryPassword) {
+    return NextResponse.json({ message: 'Password sementara wajib diisi' }, { status: 400 });
+  }
+
+  const { data: authData, error: authError } = !requireEmailVerification
+    ? await admin.auth.admin.createUser({
+      email,
+      password: temporaryPassword,
+      email_confirm: true,
+      user_metadata: {
         name,
         role,
       },
-      redirectTo: `${origin}/invite`,
-    }
-  );
+    })
+    : await admin.auth.admin.inviteUserByEmail(
+      email,
+      {
+        data: {
+          name,
+          role,
+        },
+        redirectTo: `${origin}/invite`,
+      }
+    );
 
-  if (inviteError || !inviteData.user) {
+  if (authError || !authData.user) {
     return NextResponse.json(
-      { message: inviteError?.message ?? 'Gagal mengundang user' },
+      { message: authError?.message ?? 'Gagal membuat user' },
       { status: 400 }
     );
   }
 
-  const userId = inviteData.user.id;
+  const userId = authData.user.id;
 
   const { data: profile, error: upsertProfileError } = await admin
     .from('profiles')
@@ -141,7 +167,7 @@ export async function POST(request: Request) {
       menuPermissions,
       financeCategories,
     },
-    message: 'User berhasil diundang',
+    message: requireEmailVerification ? 'User berhasil diundang' : 'User berhasil dibuat',
   });
 }
 
