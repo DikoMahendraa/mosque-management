@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Progressive Web App (PWA) support with Serwist service worker and offline caching
+- Web app manifest for installable standalone experience on mobile and desktop
+- PWA icons generated from the mosque logo (192x192, 512x512, Apple touch icon)
+- Offline fallback page shown when the dashboard is opened without a network connection
 - Role-based dashboard access with `root_admin`, `admin`, and `staff` profiles
 - Users management page for creating, editing, and deleting managed users
 - Menu permission controls for staff dashboard access
