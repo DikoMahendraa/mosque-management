@@ -27,6 +27,7 @@ import BroadcastModal from '@/components/broadcast/BroadcastModal';
 import EventRegistrationsModal from '@/components/events/EventRegistrationsModal';
 import EventDetailModal from '@/components/events/EventDetailModal';
 import EventRowActions from '@/components/events/EventRowActions';
+import EventPosterModal from '@/components/events/EventPosterModal';
 
 const defaultValues: EventFormData = {
   title: '',
@@ -48,6 +49,7 @@ export default function EventsPage() {
   const [qrCodeItem, setQrCodeItem] = useState<MosqueEvent | null>(null);
   const [registrationsItem, setRegistrationsItem] = useState<MosqueEvent | null>(null);
   const [detailItem, setDetailItem] = useState<MosqueEvent | null>(null);
+  const [posterItem, setPosterItem] = useState<MosqueEvent | null>(null);
 
   const { data, isLoading } = useEventList({ page, limit: 8, search, status: statusFilter });
   const { data: whatsappSettings } = useWhatsAppSettings();
@@ -69,11 +71,15 @@ export default function EventsPage() {
       if (editItem) {
         await updateMutation.mutateAsync({ id: editItem.id, data: formData });
         toast('success', 'Berhasil', 'Event berhasil diupdate');
+        setIsModalOpen(false);
       } else {
-        await createMutation.mutateAsync(formData);
+        const result = await createMutation.mutateAsync(formData);
+        setIsModalOpen(false);
         toast('success', 'Berhasil', 'Event berhasil ditambahkan');
+        if (result.data) {
+          setPosterItem(result.data);
+        }
       }
-      setIsModalOpen(false);
     } catch { toast('error', 'Gagal', 'Terjadi kesalahan'); }
   };
 
@@ -92,6 +98,16 @@ export default function EventsPage() {
 
   const handleShowQR = (event: MosqueEvent) => {
     setQrCodeItem(event);
+  };
+
+  const handleGeneratePoster = (event: MosqueEvent) => {
+    setPosterItem(event);
+  };
+
+  const handlePosterSaved = (event: MosqueEvent, posterUrl: string) => {
+    if (detailItem?.id === event.id) {
+      setDetailItem({ ...detailItem, poster: posterUrl });
+    }
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -174,6 +190,7 @@ export default function EventsPage() {
                             onViewRegistrations={setRegistrationsItem}
                             onShowQR={handleShowQR}
                             onBroadcast={handleBroadcast}
+                            onGeneratePoster={handleGeneratePoster}
                             onEdit={openEdit}
                             onArchive={(e) => setArchiveId(e.id)}
                           />
@@ -195,9 +212,13 @@ export default function EventsPage() {
             <Input label="Tanggal" type="date" required error={errors.event_date?.message} {...register('event_date', { required: 'Tanggal wajib diisi' })} />
             <Input label="Lokasi" required error={errors.location?.message} {...register('location', { required: 'Lokasi wajib diisi' })} />
           </div>
-          <Input label="URL Poster" placeholder="https://..." {...register('poster')} />
           <Controller name="description" control={control} render={({ field }) => <RichTextEditor label="Deskripsi" value={field.value} onChange={field.onChange} />} />
           <Select label="Status" options={[{ value: 'upcoming', label: 'Mendatang' }, { value: 'finished', label: 'Selesai' }]} {...register('status')} />
+          {!editItem && (
+            <p className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+              Poster event bisa dibuat setelah event tersimpan, lewat menu <strong>Buat Poster</strong>.
+            </p>
+          )}
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Batal</Button>
             <Button type="submit" isLoading={isSubmitting}>{editItem ? 'Simpan Perubahan' : 'Tambah Event'}</Button>
@@ -248,6 +269,14 @@ export default function EventsPage() {
         event={detailItem}
         onEdit={openEdit}
         onViewRegistrations={setRegistrationsItem}
+        onGeneratePoster={handleGeneratePoster}
+      />
+
+      <EventPosterModal
+        isOpen={!!posterItem}
+        onClose={() => setPosterItem(null)}
+        event={posterItem}
+        onPosterSaved={handlePosterSaved}
       />
     </DashboardLayout>
   );
