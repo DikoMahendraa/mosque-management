@@ -4,7 +4,7 @@ import { PostFormData } from '@/types';
 
 export const POSTS_KEY = 'posts';
 
-export function usePostList(params?: { page?: number; limit?: number; search?: string; status?: string }) {
+export function usePostList(params?: { page?: number; limit?: number; search?: string; status?: string; category?: string }) {
   return useQuery({
     queryKey: [POSTS_KEY, params],
     queryFn: () => postService.getAll(params),

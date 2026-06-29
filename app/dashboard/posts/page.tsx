@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Newspaper } from 'lucide-react';
+import { Plus, Pencil, Trash2, Newspaper, MessageCircle } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -20,6 +20,7 @@ import { Post, PostFormData } from '@/types';
 import { formatDate, slugify } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { useForm, Controller } from 'react-hook-form';
+import { buildPostShareMessage, openWhatsAppShare } from '@/lib/post-report';
 
 const defaultValues: PostFormData = {
   title: '',
@@ -27,6 +28,7 @@ const defaultValues: PostFormData = {
   content: '',
   cover_image: '',
   author: '',
+  category: '',
   published_date: '',
   status: 'draft',
 };
@@ -35,11 +37,12 @@ export default function PostsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<Post | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const { data, isLoading } = usePostList({ page, limit: 8, search, status: statusFilter });
+  const { data, isLoading } = usePostList({ page, limit: 8, search, status: statusFilter, category: categoryFilter });
   const createMutation = useCreatePost();
   const updateMutation = useUpdatePost();
   const deleteMutation = useDeletePost();
@@ -49,8 +52,21 @@ export default function PostsPage() {
   const openCreate = () => { setEditItem(null); reset(defaultValues); setIsModalOpen(true); };
   const openEdit = (item: Post) => {
     setEditItem(item);
-    reset({ title: item.title, slug: item.slug, content: item.content, cover_image: item.cover_image, author: item.author, published_date: item.published_date, status: item.status });
+    reset({
+      title: item.title,
+      slug: item.slug,
+      content: item.content,
+      cover_image: item.cover_image,
+      author: item.author,
+      category: item.category,
+      published_date: item.published_date,
+      status: item.status,
+    });
     setIsModalOpen(true);
+  };
+
+  const handleShare = (item: Post) => {
+    openWhatsAppShare(buildPostShareMessage(item));
   };
 
   const onSubmit = async (formData: PostFormData) => {
@@ -93,6 +109,12 @@ export default function PostsPage() {
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="sm:w-44"
           />
+          <Input
+            placeholder="Filter kategori..."
+            value={categoryFilter}
+            onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+            className="sm:w-44"
+          />
         </div>
         {isLoading ? <LoadingSpinner text="Memuat berita..." /> :
           (data?.data ?? []).length === 0 ? (
@@ -100,11 +122,12 @@ export default function PostsPage() {
           ) : (
             <>
               <div className="overflow-x-auto rounded-xl border border-gray-100">
-                <table className="w-full min-w-[650px] text-sm">
+                <table className="w-full min-w-[750px] text-sm">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                       <th className="px-4 py-3">Judul</th>
                       <th className="px-4 py-3">Penulis</th>
+                      <th className="px-4 py-3">Kategori</th>
                       <th className="px-4 py-3">Tanggal</th>
                       <th className="px-4 py-3">Status</th>
                       <th className="px-4 py-3 text-right">Aksi</th>
@@ -118,6 +141,7 @@ export default function PostsPage() {
                           <p className="text-xs text-gray-400">{item.slug}</p>
                         </td>
                         <td className="px-4 py-3 text-gray-600">{item.author}</td>
+                        <td className="px-4 py-3 text-gray-600 text-sm">{item.category || '–'}</td>
                         <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                           {item.published_date ? formatDate(item.published_date) : '–'}
                         </td>
@@ -129,6 +153,7 @@ export default function PostsPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1">
                             <Button variant="ghost" size="sm" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleShare(item)} className="text-green-600 hover:bg-green-50"><MessageCircle className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" onClick={() => setDeleteId(item.id)} className="text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </td>
@@ -155,6 +180,11 @@ export default function PostsPage() {
           />
           <Input label="Slug" hint="Diisi otomatis dari judul" {...register('slug')} />
           <Input label="URL Cover Image" placeholder="https://..." {...register('cover_image')} />
+          <Input
+            label="Kategori"
+            placeholder="Contoh: Pengumuman, Kajian, Kegiatan"
+            {...register('category')}
+          />
           <div className="grid grid-cols-2 gap-4">
             <Input label="Penulis" required error={errors.author?.message} {...register('author', { required: 'Penulis wajib diisi' })} />
             <Input label="Tanggal Terbit" type="date" {...register('published_date')} />
