@@ -15,6 +15,7 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import RichTextEditor from '@/components/ui/RichTextEditor';
+import ImageUpload from '@/components/ui/ImageUpload';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import QRCodeModal from '@/components/ui/QRCodeModal';
@@ -26,6 +27,7 @@ import { formatDate, formatCurrency } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { useForm, Controller } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
+import { uploadService } from '@/services/upload.service';
 import BroadcastModal from '@/components/broadcast/BroadcastModal';
 import KajianRegistrationsModal from '@/components/kajian/KajianRegistrationsModal';
 import KajianDetailModal from '@/components/kajian/KajianDetailModal';
@@ -61,6 +63,9 @@ export default function KajianPage() {
   const [detailItem, setDetailItem] = useState<Kajian | null>(null);
   const [donationInput, setDonationInput] = useState<KajianDonationInput>(defaultKajianDonationInput);
   const [donationErrors, setDonationErrors] = useState<Partial<Record<keyof KajianDonationInput, string>>>({});
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data, isLoading } = useKajianList({ page, limit: 8, search, status: statusFilter });
   const { data: ustadData } = useUstadList({ limit: 100 });
@@ -86,6 +91,8 @@ export default function KajianPage() {
     reset(defaultValues);
     setDonationInput(defaultKajianDonationInput);
     setDonationErrors({});
+    setImageFile(null);
+    setImagePreview('');
     setIsModalOpen(true);
   };
 
@@ -103,6 +110,8 @@ export default function KajianPage() {
     });
     setDonationInput(donationInputFromCampaign(item.donation_campaign));
     setDonationErrors({});
+    setImageFile(null);
+    setImagePreview(item.poster_image || '');
     setIsModalOpen(true);
   };
 
@@ -115,8 +124,28 @@ export default function KajianPage() {
     }
 
     try {
+      setIsUploading(true);
+      let imageUrl = data.poster_image;
+
+      // Upload image if a new file is selected
+      if (imageFile) {
+        try {
+          const uploadResult = await uploadService.uploadKajianImage(imageFile);
+          imageUrl = uploadResult.url;
+          toast('success', 'Berhasil', 'Gambar berhasil diupload');
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Gagal mengupload gambar';
+          toast('error', 'Gagal', errorMessage);
+          setIsUploading(false);
+          return;
+        }
+      }
+
+      // Save kajian with image URL
+      const dataToSave = { ...data, poster_image: imageUrl };
+
       if (editItem) {
-        await updateMutation.mutateAsync({ id: editItem.id, data });
+        await updateMutation.mutateAsync({ id: editItem.id, data: dataToSave });
         await kajianDonationService.upsertForKajian(
           editItem.id,
           { title: data.title, description: data.description },
@@ -124,7 +153,7 @@ export default function KajianPage() {
         );
         toast('success', 'Berhasil', 'Kajian berhasil diupdate');
       } else {
-        const result = await createMutation.mutateAsync(data);
+        const result = await createMutation.mutateAsync(dataToSave);
         await kajianDonationService.upsertForKajian(
           result.data.id,
           { title: data.title, description: data.description },
@@ -132,13 +161,19 @@ export default function KajianPage() {
         );
         toast('success', 'Berhasil', 'Kajian berhasil ditambahkan');
       }
+
       await queryClient.invalidateQueries({ queryKey: [KAJIAN_KEY] });
       setIsModalOpen(false);
       reset(defaultValues);
       setDonationInput(defaultKajianDonationInput);
       setDonationErrors({});
-    } catch {
-      toast('error', 'Gagal', 'Terjadi kesalahan');
+      setImageFile(null);
+      setImagePreview('');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan';
+      toast('error', 'Gagal', errorMessage);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -161,7 +196,12 @@ export default function KajianPage() {
     setQrCodeItem(kajian);
   };
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || isUploading;
+
+  const handleImageChange = (file: File | null, preview: string) => {
+    setImageFile(file);
+    setImagePreview(preview);
+  };
 
   return (
     <DashboardLayout
@@ -326,7 +366,15 @@ export default function KajianPage() {
             <Input label="Waktu" type="time" required error={errors.time?.message} {...register('time', { required: 'Waktu wajib diisi' })} />
           </div>
           <Input label="Lokasi" required error={errors.location?.message} {...register('location', { required: 'Lokasi wajib diisi' })} />
-          <Input label="URL Poster" placeholder="https://..." {...register('poster_image')} />
+
+          <ImageUpload
+            label="Gambar Poster"
+            value={imagePreview}
+            onChange={handleImageChange}
+            maxSizeMB={1}
+            disabled={isSubmitting}
+          />
+
           <Controller
             name="description"
             control={control}
@@ -348,8 +396,10 @@ export default function KajianPage() {
             {...register('status')}
           />
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Batal</Button>
-            <Button type="submit" isLoading={isSubmitting}>{editItem ? 'Simpan Perubahan' : 'Tambah Kajian'}</Button>
+            <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Batal</Button>
+            <Button type="submit" isLoading={isSubmitting}>
+              {isUploading ? 'Mengupload...' : editItem ? 'Simpan Perubahan' : 'Tambah Kajian'}
+            </Button>
           </div>
         </form>
       </Modal>

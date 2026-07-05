@@ -35,6 +35,26 @@ const menuIcons: Record<MenuKey, React.ComponentType<{ className?: string }>> = 
   settings: Settings,
 };
 
+// Menu groups for better organization
+const menuGroups = [
+  {
+    label: 'Utama',
+    items: ['dashboard'],
+  },
+  {
+    label: 'Konten',
+    items: ['landing', 'kajian', 'events', 'posts'],
+  },
+  {
+    label: 'Data',
+    items: ['finance', 'ustad', 'jamaah', 'management', 'users'],
+  },
+  {
+    label: 'Sistem',
+    items: ['settings'],
+  },
+];
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { isOpen, isMobileOpen, setMobileOpen } = useSidebarStore();
@@ -81,45 +101,70 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3">
-          <ul className="space-y-1">
-            {navItems.map((item) => {
-              const isActive = item.href === '/dashboard'
-                ? pathname === '/dashboard'
-                : pathname.startsWith(item.href);
-              const Icon = menuIcons[item.key];
+        <nav className="flex-1 overflow-y-auto py-3 px-3">
+          {menuGroups.map((group, groupIndex) => {
+            const groupItems = navItems.filter((item) =>
+              group.items.includes(item.key)
+            );
 
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 group',
-                      isActive
-                        ? 'bg-primary text-white border border-primary'
-                        : 'text-white hover:bg-white hover:text-primary',
-                      !isOpen && 'lg:justify-center lg:px-2'
-                    )}
-                    title={!isOpen ? item.label : undefined}
-                  >
-                    <Icon
-                      className={cn(
-                        'h-5 w-5 shrink-0 transition-colors',
-                        isActive ? 'text-white' : 'text-white group-hover:text-primary'
-                      )}
-                    />
-                    {(isOpen || isMobileOpen) && (
-                      <span className="truncate">{item.label}</span>
-                    )}
-                    {isActive && (isOpen || isMobileOpen) && (
-                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white" />
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+            if (groupItems.length === 0) return null;
+
+            return (
+              <div key={group.label} className={cn(groupIndex > 0 && 'mt-4')}>
+                {/* Group Label */}
+                {(isOpen || isMobileOpen) && (
+                  <div className="mb-1 px-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
+                      {group.label}
+                    </p>
+                  </div>
+                )}
+
+                {/* Group Items */}
+                <ul className="space-y-0.5">
+                  {groupItems.map((item) => {
+                    const isActive =
+                      item.href === '/dashboard'
+                        ? pathname === '/dashboard'
+                        : pathname.startsWith(item.href);
+                    const Icon = menuIcons[item.key];
+
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            'flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs transition-all duration-150 group',
+                            isActive
+                              ? 'bg-primary text-white border border-primary'
+                              : 'text-white hover:bg-white hover:text-primary',
+                            !isOpen && 'lg:justify-center lg:px-2'
+                          )}
+                          title={!isOpen ? item.label : undefined}
+                        >
+                          <Icon
+                            className={cn(
+                              'h-4 w-4 shrink-0 transition-colors',
+                              isActive
+                                ? 'text-white'
+                                : 'text-white group-hover:text-primary'
+                            )}
+                          />
+                          {(isOpen || isMobileOpen) && (
+                            <span className="truncate">{item.label}</span>
+                          )}
+                          {isActive && (isOpen || isMobileOpen) && (
+                            <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white" />
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
         </nav>
 
         {/* Footer */}
