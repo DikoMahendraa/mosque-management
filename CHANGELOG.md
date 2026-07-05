@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Image upload component with drag-and-drop support for event and kajian posters
+- Supabase Storage integration for event and kajian images (`event-images` bucket)
+- Upload service for handling image validation, upload, and deletion operations
+- Storage setup documentation and SQL migration for creating bucket and RLS policies
+- Image preview, replace, and remove functionality in upload interface
+- File size validation (max 1 MB) and type validation (JPEG, PNG, WebP)
 - Progressive Web App (PWA) support with Serwist service worker and offline caching
 - Web app manifest for installable standalone experience on mobile and desktop
 - PWA icons generated from the mosque logo (192x192, 512x512, Apple touch icon)
@@ -27,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Events and kajian forms updated to support poster image uploads
+- Event poster generation workflow integrated with image upload component
 - Sidebar navigation now only shows menus available to the current user
 - Dashboard pages now block direct URL access when the user lacks menu permission
 - Finance form categories simplified to `Sosial`, `Kajian`, and `Operasional`
@@ -35,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Added Supabase Storage bucket (`event-images`) with Row Level Security policies
+- Storage policies ensure only authenticated users can upload, update, or delete images
+- Public read access enabled for event and kajian poster images
 - Added Supabase profile, menu permission, and finance category permission SQL structure
 - Tightened finance transaction RLS to respect menu and category access
 - Added server-side safeguards so admins cannot edit or delete themselves

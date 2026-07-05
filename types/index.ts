@@ -28,6 +28,7 @@ export type MenuKey =
   | 'landing'
   | 'kajian'
   | 'events'
+  | 'posts'
   | 'finance'
   | 'ustad'
   | 'jamaah'
@@ -276,6 +277,7 @@ export interface Post {
   content: string;
   cover_image: string;
   author: string;
+  category: string;
   published_date: string;
   status: 'draft' | 'published';
   created_at: string;

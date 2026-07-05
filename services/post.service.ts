@@ -1,9 +1,25 @@
-import { Post, PostFormData, ApiResponse, PaginationMeta } from '@/types';
-import { mockPosts } from '@/lib/mock-data';
-import { generateId, slugify } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import { Post, PostFormData, ApiResponse } from '@/types';
+import { slugify } from '@/lib/utils';
 
-let postData: Post[] = [...mockPosts];
-const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+function mapPost(row: Record<string, unknown>): Post {
+  const published_date =
+    typeof row.published_date === 'string' ? row.published_date.slice(0, 10) : '';
+
+  return {
+    id: String(row.id),
+    title: String(row.title ?? ''),
+    slug: String(row.slug ?? ''),
+    content: String(row.content ?? ''),
+    cover_image: String(row.cover_image ?? ''),
+    author: String(row.author ?? ''),
+    category: String(row.category ?? ''),
+    published_date,
+    status: row.status as Post['status'],
+    created_at: String(row.created_at ?? ''),
+    updated_at: String(row.updated_at ?? ''),
+  };
+}
 
 export const postService = {
   async getAll(params?: {
@@ -11,62 +27,98 @@ export const postService = {
     limit?: number;
     search?: string;
     status?: string;
+    category?: string;
   }): Promise<ApiResponse<Post[]>> {
-    await delay();
-    let data = [...postData];
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      data = data.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.author.toLowerCase().includes(q)
-      );
-    }
-    if (params?.status) {
-      data = data.filter((p) => p.status === params.status);
-    }
-
+    const supabase = createClient();
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 10;
-    const total = data.length;
-    const totalPages = Math.ceil(total / limit);
-    const paginatedData = data.slice((page - 1) * limit, page * limit);
-    const meta: PaginationMeta = { page, limit, total, totalPages };
-    return { data: paginatedData, meta };
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from('posts')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (params?.status) {
+      query = query.eq('status', params.status);
+    }
+
+    if (params?.category) {
+      query = query.ilike('category', `%${params.category.trim()}%`);
+    }
+
+    if (params?.search) {
+      const q = `%${params.search.trim()}%`;
+      query = query.or(`title.ilike.${q},author.ilike.${q}`);
+    }
+
+    const { data, error, count } = await query.range(from, to);
+    if (error) throw new Error(error.message);
+
+    const total = count ?? 0;
+    return {
+      data: (data ?? []).map((row: Record<string, unknown>) => mapPost(row)),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   },
 
   async getById(id: string): Promise<ApiResponse<Post>> {
-    await delay();
-    const item = postData.find((p) => p.id === id);
-    if (!item) throw new Error('Post not found');
-    return { data: item };
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw new Error(error.message);
+    return { data: mapPost(data as Record<string, unknown>) };
   },
 
   async create(payload: PostFormData): Promise<ApiResponse<Post>> {
-    await delay();
-    const newItem: Post = {
+    const supabase = createClient();
+    const { data: userData } = await supabase.auth.getUser();
+    const insert = {
       ...payload,
-      id: generateId(),
       slug: payload.slug || slugify(payload.title),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      published_date: payload.published_date || null,
+      created_by: userData.user?.id ?? null,
     };
-    postData = [newItem, ...postData];
-    return { data: newItem, message: 'Post berhasil dibuat' };
+    const { data, error } = await supabase
+      .from('posts')
+      .insert(insert)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return { data: mapPost(data as Record<string, unknown>), message: 'Berita berhasil dibuat' };
   },
 
   async update(id: string, payload: Partial<PostFormData>): Promise<ApiResponse<Post>> {
-    await delay();
-    const index = postData.findIndex((p) => p.id === id);
-    if (index === -1) throw new Error('Post not found');
-    postData[index] = { ...postData[index], ...payload, updated_at: new Date().toISOString() };
-    return { data: postData[index], message: 'Post berhasil diupdate' };
+    const supabase = createClient();
+    const update = {
+      ...payload,
+      ...(payload.published_date !== undefined && {
+        published_date: payload.published_date || null,
+      }),
+    };
+    const { data, error } = await supabase
+      .from('posts')
+      .update(update)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return { data: mapPost(data as Record<string, unknown>), message: 'Berita berhasil diupdate' };
   },
 
   async delete(id: string): Promise<ApiResponse<null>> {
-    await delay();
-    postData = postData.filter((p) => p.id !== id);
-    return { data: null, message: 'Post berhasil dihapus' };
+    const supabase = createClient();
+    const { error } = await supabase.from('posts').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    return { data: null, message: 'Berita berhasil dihapus' };
   },
 };

@@ -14,6 +14,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import RichTextEditor from '@/components/ui/RichTextEditor';
+import ImageUpload from '@/components/ui/ImageUpload';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import QRCodeModal from '@/components/ui/QRCodeModal';
@@ -23,6 +24,7 @@ import { MosqueEvent, EventFormData } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
 import { useForm, Controller } from 'react-hook-form';
+import { uploadService } from '@/services/upload.service';
 import BroadcastModal from '@/components/broadcast/BroadcastModal';
 import EventRegistrationsModal from '@/components/events/EventRegistrationsModal';
 import EventDetailModal from '@/components/events/EventDetailModal';
@@ -50,6 +52,9 @@ export default function EventsPage() {
   const [registrationsItem, setRegistrationsItem] = useState<MosqueEvent | null>(null);
   const [detailItem, setDetailItem] = useState<MosqueEvent | null>(null);
   const [posterItem, setPosterItem] = useState<MosqueEvent | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data, isLoading } = useEventList({ page, limit: 8, search, status: statusFilter });
   const { data: whatsappSettings } = useWhatsAppSettings();
@@ -59,28 +64,66 @@ export default function EventsPage() {
 
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<EventFormData>({ defaultValues });
 
-  const openCreate = () => { setEditItem(null); reset(defaultValues); setIsModalOpen(true); };
+  const openCreate = () => { 
+    setEditItem(null); 
+    reset(defaultValues); 
+    setImageFile(null);
+    setImagePreview('');
+    setIsModalOpen(true); 
+  };
+  
   const openEdit = (item: MosqueEvent) => {
     setEditItem(item);
     reset({ title: item.title, description: item.description, event_date: item.event_date, location: item.location, poster: item.poster, status: item.status });
+    setImageFile(null);
+    setImagePreview(item.poster || '');
     setIsModalOpen(true);
   };
 
   const onSubmit = async (formData: EventFormData) => {
     try {
+      setIsUploading(true);
+      let imageUrl = formData.poster;
+
+      // Upload image if a new file is selected
+      if (imageFile) {
+        try {
+          const uploadResult = await uploadService.uploadEventImage(imageFile);
+          imageUrl = uploadResult.url;
+          toast('success', 'Berhasil', 'Gambar berhasil diupload');
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Gagal mengupload gambar';
+          toast('error', 'Gagal', errorMessage);
+          setIsUploading(false);
+          return;
+        }
+      }
+
+      // Save event with image URL
+      const dataToSave = { ...formData, poster: imageUrl };
+
       if (editItem) {
-        await updateMutation.mutateAsync({ id: editItem.id, data: formData });
+        await updateMutation.mutateAsync({ id: editItem.id, data: dataToSave });
         toast('success', 'Berhasil', 'Event berhasil diupdate');
         setIsModalOpen(false);
       } else {
-        const result = await createMutation.mutateAsync(formData);
+        const result = await createMutation.mutateAsync(dataToSave);
         setIsModalOpen(false);
         toast('success', 'Berhasil', 'Event berhasil ditambahkan');
         if (result.data) {
           setPosterItem(result.data);
         }
       }
-    } catch { toast('error', 'Gagal', 'Terjadi kesalahan'); }
+      
+      // Reset image states
+      setImageFile(null);
+      setImagePreview('');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan';
+      toast('error', 'Gagal', errorMessage);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const onArchive = async () => {
@@ -110,7 +153,12 @@ export default function EventsPage() {
     }
   };
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || isUploading;
+
+  const handleImageChange = (file: File | null, preview: string) => {
+    setImageFile(file);
+    setImagePreview(preview);
+  };
 
   return (
     <DashboardLayout
@@ -213,6 +261,15 @@ export default function EventsPage() {
             <Input label="Lokasi" required error={errors.location?.message} {...register('location', { required: 'Lokasi wajib diisi' })} />
           </div>
           <Controller name="description" control={control} render={({ field }) => <RichTextEditor label="Deskripsi" value={field.value} onChange={field.onChange} />} />
+          
+          <ImageUpload
+            label="Gambar Event"
+            value={imagePreview}
+            onChange={handleImageChange}
+            maxSizeMB={1}
+            disabled={isSubmitting}
+          />
+          
           <Select label="Status" options={[{ value: 'upcoming', label: 'Mendatang' }, { value: 'finished', label: 'Selesai' }]} {...register('status')} />
           {!editItem && (
             <p className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
@@ -220,8 +277,10 @@ export default function EventsPage() {
             </p>
           )}
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Batal</Button>
-            <Button type="submit" isLoading={isSubmitting}>{editItem ? 'Simpan Perubahan' : 'Tambah Event'}</Button>
+            <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Batal</Button>
+            <Button type="submit" isLoading={isSubmitting}>
+              {isUploading ? 'Mengupload...' : editItem ? 'Simpan Perubahan' : 'Tambah Event'}
+            </Button>
           </div>
         </form>
       </Modal>
