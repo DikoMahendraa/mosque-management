@@ -108,10 +108,8 @@ export function computeFinanceTotals(transactions: FinanceTransaction[]) {
   };
 }
 
-function formatLine(label: string, amount: number, maxLabelWidth = 28): string {
-  const amountStr = formatCurrency(amount);
-  const padded = label.length >= maxLabelWidth ? label.slice(0, maxLabelWidth - 1) + '…' : label.padEnd(maxLabelWidth, ' ');
-  return `• ${padded} ${amountStr}`;
+function formatLine(dateStr: string, label: string, amount: number): string {
+  return `• _${dateStr}_ — ${label}\n  ${formatCurrency(amount)}`;
 }
 
 export function buildFinanceReportMessage(
@@ -139,8 +137,9 @@ export function buildFinanceReportMessage(
     lines.push('_(Tidak ada pemasukan)_');
   } else {
     income.forEach((t) => {
+      const dateStr = formatDate(t.date, 'DD MMM YYYY');
       const label = t.category ? `${t.category} — ${t.title}` : t.title;
-      lines.push(formatLine(label, t.amount));
+      lines.push(formatLine(dateStr, label, t.amount));
     });
   }
   lines.push(`*Total pemasukan:* ${formatCurrency(total_income)}`);
@@ -151,8 +150,9 @@ export function buildFinanceReportMessage(
     lines.push('_(Tidak ada pengeluaran)_');
   } else {
     expense.forEach((t) => {
+      const dateStr = formatDate(t.date, 'DD MMM YYYY');
       const label = t.category ? `${t.category} — ${t.title}` : t.title;
-      lines.push(formatLine(label, t.amount));
+      lines.push(formatLine(dateStr, label, t.amount));
     });
   }
   lines.push(`*Total pengeluaran:* ${formatCurrency(total_expense)}`);

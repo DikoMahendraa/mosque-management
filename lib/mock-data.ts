@@ -4,7 +4,6 @@ import {
   TahsinClass,
   BerbagiProgram,
   GalleryItem,
-  Post,
   FinanceTransaction,
   MosqueAdmin,
   PrayerSchedule,
@@ -400,62 +399,6 @@ export const mockGallery: GalleryItem[] = [
 ];
 
 // ============================================================
-// POSTS
-// ============================================================
-
-export const mockPosts: Post[] = [
-  {
-    id: '1',
-    title: 'Menyambut Ramadhan 1445 H dengan Penuh Semangat',
-    slug: 'menyambut-ramadhan-1445h',
-    content:
-      '<h2>Alhamdulillah</h2><p>Bulan Ramadhan 1445 H semakin dekat. Mari kita persiapkan diri dengan memperbanyak ibadah dan amal sholeh.</p>',
-    cover_image: 'https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=800',
-    author: 'Admin Darussalam',
-    published_date: '2024-03-01',
-    status: 'published',
-    created_at: '2024-03-01T08:00:00Z',
-    updated_at: '2024-03-01T08:00:00Z',
-  },
-  {
-    id: '2',
-    title: 'Jadwal Kajian Rutin Masjid Darussalam Maret 2024',
-    slug: 'jadwal-kajian-maret-2024',
-    content:
-      '<p>Berikut adalah jadwal kajian rutin Masjid Darussalam untuk bulan Maret 2024.</p>',
-    cover_image: 'https://images.unsplash.com/photo-1585036156171-384164a8c675?w=800',
-    author: 'Admin Darussalam',
-    published_date: '2024-03-01',
-    status: 'published',
-    created_at: '2024-03-01T09:00:00Z',
-    updated_at: '2024-03-01T09:00:00Z',
-  },
-  {
-    id: '3',
-    title: 'Program Beasiswa Santri Tahfidz 2024',
-    slug: 'beasiswa-santri-tahfidz-2024',
-    content: '<p>Masjid Darussalam membuka program beasiswa untuk santri tahfidz berprestasi.</p>',
-    cover_image: 'https://images.unsplash.com/photo-1609358905607-b72f1fae0e6e?w=800',
-    author: 'Humas Darussalam',
-    published_date: '',
-    status: 'draft',
-    created_at: '2024-02-28T08:00:00Z',
-    updated_at: '2024-02-28T08:00:00Z',
-  },
-  {
-    id: '4',
-    title: 'Laporan Keuangan Masjid Februari 2024',
-    slug: 'laporan-keuangan-februari-2024',
-    content: '<p>Transparansi laporan keuangan Masjid Darussalam bulan Februari 2024.</p>',
-    cover_image: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800',
-    author: 'Bendahara Darussalam',
-    published_date: '2024-03-05',
-    status: 'published',
-    created_at: '2024-03-05T08:00:00Z',
-    updated_at: '2024-03-05T08:00:00Z',
-  },
-];
-
 // ============================================================
 // FINANCE
 // ============================================================

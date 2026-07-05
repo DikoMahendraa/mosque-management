@@ -19,15 +19,21 @@ CREATE TRIGGER finance_transactions_updated_at
 ALTER TABLE public.finance_transactions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public can read finance_transactions" ON public.finance_transactions;
-DROP POLICY IF EXISTS "Authenticated users can insert finance_transactions" ON public.finance_transactions;
-DROP POLICY IF EXISTS "Authenticated users can update finance_transactions" ON public.finance_transactions;
-DROP POLICY IF EXISTS "Authenticated users can delete finance_transactions" ON public.finance_transactions;
+DROP POLICY IF EXISTS "Authenticated users can read permitted finance_transactions" ON public.finance_transactions;
+DROP POLICY IF EXISTS "Authenticated users can insert permitted finance_transactions" ON public.finance_transactions;
+DROP POLICY IF EXISTS "Authenticated users can update permitted finance_transactions" ON public.finance_transactions;
+DROP POLICY IF EXISTS "Authenticated users can delete permitted finance_transactions" ON public.finance_transactions;
 DROP POLICY IF EXISTS "Users can read permitted finance_transactions" ON public.finance_transactions;
 DROP POLICY IF EXISTS "Users can insert permitted finance_transactions" ON public.finance_transactions;
 DROP POLICY IF EXISTS "Users can update permitted finance_transactions" ON public.finance_transactions;
 DROP POLICY IF EXISTS "Users can delete permitted finance_transactions" ON public.finance_transactions;
 
-CREATE POLICY "Users can read permitted finance_transactions"
+CREATE POLICY "Public can read finance_transactions"
+  ON public.finance_transactions FOR SELECT
+  TO anon
+  USING (true);
+
+CREATE POLICY "Authenticated users can read permitted finance_transactions"
   ON public.finance_transactions FOR SELECT
   TO authenticated
   USING (
@@ -35,7 +41,7 @@ CREATE POLICY "Users can read permitted finance_transactions"
     AND public.can_access_finance_category(category)
   );
 
-CREATE POLICY "Users can insert permitted finance_transactions"
+CREATE POLICY "Authenticated users can insert permitted finance_transactions"
   ON public.finance_transactions FOR INSERT
   TO authenticated
   WITH CHECK (
@@ -43,7 +49,7 @@ CREATE POLICY "Users can insert permitted finance_transactions"
     AND public.can_access_finance_category(category)
   );
 
-CREATE POLICY "Users can update permitted finance_transactions"
+CREATE POLICY "Authenticated users can update permitted finance_transactions"
   ON public.finance_transactions FOR UPDATE
   TO authenticated
   USING (
@@ -55,7 +61,7 @@ CREATE POLICY "Users can update permitted finance_transactions"
     AND public.can_access_finance_category(category)
   );
 
-CREATE POLICY "Users can delete permitted finance_transactions"
+CREATE POLICY "Authenticated users can delete permitted finance_transactions"
   ON public.finance_transactions FOR DELETE
   TO authenticated
   USING (

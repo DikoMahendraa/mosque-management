@@ -8,6 +8,7 @@ export const DASHBOARD_MENUS = [
   { key: 'landing', href: '/dashboard/landing', label: 'Landing Page' },
   { key: 'kajian', href: '/dashboard/kajian', label: 'Kajian' },
   { key: 'events', href: '/dashboard/events', label: 'Events' },
+  { key: 'posts', href: '/dashboard/posts', label: 'Berita' },
   { key: 'finance', href: '/dashboard/finance', label: 'Keuangan' },
   { key: 'ustad', href: '/dashboard/ustad', label: 'Daftar Ustad' },
   { key: 'jamaah', href: '/dashboard/jamaah', label: 'Daftar Jamaah' },
